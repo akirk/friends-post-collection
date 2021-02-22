@@ -232,7 +232,6 @@ class Friends_Post_Collector {
 			update_option( 'friends-post-collector_default_user', $_POST['user_id'] );
 		}
 		$default_user = get_option( 'friends-post-collector_default_user' );
-
 		?>
 	<h1><?php _e( 'Friends Post Collector', 'post-collector' ); ?></h1>
 
@@ -245,7 +244,7 @@ class Friends_Post_Collector {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Default User', 'post-collector' ); ?></th>
 					<td>
-						<select name="main_user_id">
+						<select name="user_id">
 							<?php foreach ( $this->get_post_collection_users()->get_results() as $potential_default_user ) : ?>
 							<option value="<?php echo esc_attr( $potential_default_user->ID ); ?>" <?php selected( $default_user, $potential_default_user->ID ); ?>><?php echo esc_html( $potential_default_user->display_name ); ?></option>
 
