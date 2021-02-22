@@ -48,6 +48,7 @@ class Friends_Post_Collector {
 		add_action( 'user_new_form_tag', array( $this, 'user_new_form_tag' ) );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
 		add_action( 'wp_loaded', array( $this, 'save_url_endpoint' ), 100 );
+		add_filter( 'get_edit_user_link', array( $this, 'edit_post_collection_link' ), 10, 2 );
 		// add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'friend_post_edit_link', array( $this, 'allow_post_editing' ), 10, 2 );
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_edit_post_collection' ) );
@@ -78,10 +79,25 @@ class Friends_Post_Collector {
 		$user_id = get_the_author_meta( 'ID' );
 		if ( $this->is_post_collection_user( $user_id ) ) {
 			?>
-			<li class="menu-item"><a href="<?php echo esc_url( self_admin_url( 'admin.php?page=edit-post-collection&user=' . $user_id ) ); ?>"><?php _e( 'Edit Post Collection', 'friends-post-collector' ); ?></a></li>
+			<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php _e( 'Edit Post Collection', 'friends-post-collector' ); ?></a></li>
 			<?php
 		}
 	}
+
+	public function edit_post_collection_link( $link, $user_id ) {
+		$user = new WP_User( $user_id );
+		if ( is_multisite() && is_super_admin( $user->ID ) ) {
+			return $link;
+		}
+		if (
+			! $user->has_cap( 'post_collection' )
+		) {
+			return $link;
+		}
+
+		return self_admin_url( 'admin.php?page=edit-post-collection&user=' . $user_id );
+	}
+
 
 	public function is_post_collection_user( $user_id ) {
 		static $cache = array();

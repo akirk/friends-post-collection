@@ -5,7 +5,7 @@
  * Plugin URI: https://github.com/akirk/friends-post-collector
  * Version: 0.1
  *
- * Description: Send friend posts to your e-reader.
+ * Description: Collect posts from around the web into your Friends UI.
  *
  * License: GPL2
  * Text Domain: friends-post-collector
