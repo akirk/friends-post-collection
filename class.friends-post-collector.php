@@ -113,7 +113,7 @@ class Friends_Post_Collector {
 	/**
 	 * Process access for the Friends Edit User page
 	 */
-	private function check_edit_user() {
+	private function check_edit_post_collection() {
 		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to edit this user.' ) );
 		}
@@ -139,8 +139,31 @@ class Friends_Post_Collector {
 
 		return $user;
 	}
-	public function render_edit_user( $user_id ) {
-		$user = $this->check_edit_user();
+
+	/**
+	 * Process the Friends Edit Post Collection page
+	 */
+	public function process_edit_post_collection() {
+		$user    = $this->check_edit_post_collection();
+		$arg       = 'updated';
+		$arg_value = 1;
+
+		if ( isset( $_POST['_wpnonce'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'edit-post-collection-' . $user->ID ) ) {
+			do_action( 'friends_edit_post_collection_after_form_submit', $user );
+		} else {
+			return;
+		}
+
+		if ( isset( $_GET['wp_http_referer'] ) ) {
+			wp_safe_redirect( $_GET['wp_http_referer'] );
+		} else {
+			wp_safe_redirect( add_query_arg( $arg, $arg_value, remove_query_arg( array( 'wp_http_referer', '_wpnonce' ), wp_unslash( $_SERVER['REQUEST_URI'] ) ) ) );
+		}
+		exit;
+	}
+
+	public function render_edit_post_collection( $user_id ) {
+		$user = $this->check_edit_post_collection();
 		$args = array(
 			'user'  => $user,
 			'posts' => new WP_Query(
@@ -183,20 +206,30 @@ class Friends_Post_Collector {
 		// Only show the menu if installed standalone.
 		$friends_settings_exist = '' !== menu_page_url( 'friends-settings', false );
 		if ( $friends_settings_exist ) {
+			$friend_requests = Friend_User_Query::all_friend_requests();
+			$friend_request_count = $friend_requests->get_total();
+			$unread_badge = $this->friends->admin->get_unread_badge( $friend_request_count );
+
+			$menu_title = __( 'Friends', 'friends' ) . $unread_badge;
+			$page_type = sanitize_title( $menu_title );
+
 			add_submenu_page(
 				'friends-settings',
-				__( 'Plugin: Post Collector', 'post-collector' ),
-				__( 'Plugin: Post Collector', 'post-collector' ),
+				__( 'Post Collector', 'friends-post-collector' ),
+				__( 'Post Collector', 'friends-post-collector' ),
 				'administrator',
 				'friends-post-collector',
 				array( $this, 'about_page' )
 			);
 		} else {
-			add_menu_page( 'friends', __( 'Friends', 'post-collector' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3.73 );
+			$menu_title = __( 'Friends Post Collector', 'friends-post-collector' );
+			$page_type = sanitize_title( $menu_title );
+
+			add_menu_page( 'friends', __( 'Friends Post Collector', 'friends-post-collector' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3.73 );
 			add_submenu_page(
 				'friends-settings',
-				__( 'About', 'post-collector' ),
-				__( 'About', 'post-collector' ),
+				__( 'About', 'friends-post-collector' ),
+				__( 'About', 'friends-post-collector' ),
 				'administrator',
 				'friends-settings',
 				array( $this, 'about_page_with_friends_about' )
@@ -204,7 +237,10 @@ class Friends_Post_Collector {
 
 		}
 
-		add_submenu_page( 'friends-settings', __( 'Edit User', 'friends' ), __( 'Edit User', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_user' ) );
+		if ( isset( $_GET['page'] ) && 0 === strpos( $_GET['page'], 'edit-post-collection' ) ) {
+			add_submenu_page( 'friends-settings', __( 'Edit User', 'friends' ), __( 'Edit User', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
+			add_action( 'load-' . $page_type . '_page_edit-post-collection', array( $this, 'process_edit_post_collection' ) );
+		}
 	}
 
 	/**
@@ -233,7 +269,7 @@ class Friends_Post_Collector {
 		}
 		$default_user = get_option( 'friends-post-collector_default_user' );
 		?>
-	<h1><?php _e( 'Friends Post Collector', 'post-collector' ); ?></h1>
+	<h1><?php _e( 'Friends Post Collector', 'friends-post-collector' ); ?></h1>
 
 	<p><?php _e( 'The Friends Post Collector plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.' ); ?></p>
 
@@ -242,7 +278,7 @@ class Friends_Post_Collector {
 		<table class="form-table">
 			<tbody>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Default User', 'post-collector' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Default User', 'friends-post-collector' ); ?></th>
 					<td>
 						<select name="user_id">
 							<?php foreach ( $this->get_post_collection_users()->get_results() as $potential_default_user ) : ?>
@@ -269,7 +305,7 @@ class Friends_Post_Collector {
 			</tbody>
 		</table>
 		<p class="submit">
-			<input type="submit" id="submit" class="button button-primary" value="<?php esc_html_e( 'Save Changes', 'post-collector' ); ?>">
+			<input type="submit" id="submit" class="button button-primary" value="<?php esc_html_e( 'Save Changes', 'friends-post-collector' ); ?>">
 		</p>
 	</form>
 
@@ -278,7 +314,7 @@ class Friends_Post_Collector {
 			<?php
 			echo wp_kses(
 					// translators: %s: URL to the Friends Plugin page on WordPress.org.
-				sprintf( __( 'The Friends plugin is all about connecting with friends and news. Learn more on its <a href=%s>plugin page on WordPress.org</a>.', 'post-collector' ), '"https://wordpress.org/plugins/friends" target="_blank" rel="noopener noreferrer"' ),
+				sprintf( __( 'The Friends plugin is all about connecting with friends and news. Learn more on its <a href=%s>plugin page on WordPress.org</a>.', 'friends-post-collector' ), '"https://wordpress.org/plugins/friends" target="_blank" rel="noopener noreferrer"' ),
 				array(
 					'a' => array(
 						'href'   => array(),
@@ -294,7 +330,7 @@ class Friends_Post_Collector {
 		<?php
 		echo wp_kses(
 			// translators: %s: URL to the Embed library.
-			sprintf( __( 'This plugin is uses information of the open source project <a href=%s>FTR Site Config</a>.', 'post-collector' ), '"https://github.com/fivefilters/ftr-site-config" target="_blank" rel="noopener noreferrer"' ),
+			sprintf( __( 'This plugin is uses information of the open source project <a href=%s>FTR Site Config</a>.', 'friends-post-collector' ), '"https://github.com/fivefilters/ftr-site-config" target="_blank" rel="noopener noreferrer"' ),
 			array(
 				'a' => array(
 					'href'   => array(),
