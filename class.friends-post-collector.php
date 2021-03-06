@@ -443,17 +443,6 @@ class Friends_Post_Collector {
 
 			$title   = strip_tags( trim( $item->title ) );
 			$content = trim( wp_kses_post( $item->content ) );
-			$content = '<p>' . sprintf(
-				wp_kses( __( 'Originally posted at <a href="%1$s">%2$s</a>', 'friends-post-collector' ), $url . '" target="_blank" rel="noopener noreferrer"' ),
-				array(
-					'a' => array(
-						'href'   => array(),
-						'rel'    => array(),
-						'target' => array(),
-					),
-				),
-				$domain
-			) . '</p>' . PHP_EOL . $content;
 
 			$post_data = array(
 				'post_title'    => $title,
