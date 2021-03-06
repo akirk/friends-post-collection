@@ -376,7 +376,7 @@ class Friends_Post_Collector {
 
 			<p><?php _e( "Drag one of these bookmarklets to your bookmarks bar and click it when you're on an article you want to save from the web.", 'friends-post-collector' ); ?></p>
 			<p>
-				<a href="javascript:void((function()%7Bs=document.createElement('script');s.setAttribute('id','friends-post-collector-script');s.setAttribute('data-post-url','<?php echo esc_url( home_url( '/' ) ); ?>');s.src='<?php echo urlencode( plugins_url( 'friends-post-collector-injector.js', FRIENDS_POST_COLLECTOR_PLUGIN_FILE ) ); ?>';document.body.appendChild(s)%7D)())" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd;text-decoration: none; margin-right: 3em"><?php echo esc_html_e( 'Collect Post', 'friends-post-collector' ); ?></a>
+				<a href="javascript:<?php echo rawurlencode( trim( str_replace( "document.getElementById( 'friends-post-collector-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( home_url( '/' ) ) . "'", str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', file_get_contents( __DIR__ . '/friends-post-collector-injector.js' ) ) ) ), ';' ) ); ?>" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd;text-decoration: none; margin-right: 3em"><?php echo esc_html_e( 'Collect Post', 'friends-post-collector' ); ?></a>
 			</p>
 			<h3><?php _e( 'Browser Extension', 'friends-post-collector' ); ?></h3>
 
@@ -507,7 +507,6 @@ class Friends_Post_Collector {
 			if ( ! $text ) {
 				continue;
 			}
-
 			return $this->parse_site_config( $text );
 		}
 		return false;
@@ -617,7 +616,6 @@ class Friends_Post_Collector {
 		if ( isset( $site_config['http_header'] ) ) {
 			$args['headers'] = array_merge( $args['headers'], $site_config['http_header'] );
 		}
-
 		if ( ! $content ) {
 			$response = wp_safe_remote_get( $url, $args );
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
@@ -681,6 +679,13 @@ class Friends_Post_Collector {
 			$item->title = $xpath->query( $site_config['title'] );
 			if ( $item->title ) {
 				$item->title = $this->get_inner_html( $item->title );
+			}
+		}
+
+		if ( isset( $site_config['author'] ) ) {
+			$item->author = $xpath->query( str_replace('h2','h1',$site_config['author'] ));
+			if ( $item->author ) {
+				$item->author = $this->get_inner_html( $item->author );
 			}
 		}
 
