@@ -347,7 +347,7 @@ class Friends_Post_Collector {
 	public function toolbox_bookmarklet() {
 		$post_collections = array();
 		foreach ( $this->get_post_collection_users()->get_results() as $user ) {
-			$url = home_url( '/?user-id=' . $user->ID );
+			$url = home_url( '/?user=' . $user->ID );
 			$post_collections[ $url ] = $user->display_name;
 		}
 		$this->template_loader()->get_template_part(
@@ -363,7 +363,7 @@ class Friends_Post_Collector {
 	public function save_url_endpoint() {
 		$delimiter = '===BODY===';
 		$url = false;
-		if ( isset( $_REQUEST['friends-save-url'] ) && $_REQUEST['user-id'] ) {
+		if ( isset( $_REQUEST['friends-save-url'] ) && $_REQUEST['user'] ) {
 			list( $last_url, $last_body ) = explode( $delimiter, get_option( 'friends-post-collector_last_save', $delimiter ) );
 			$url = $_REQUEST['friends-save-url'];
 			$body = false;
@@ -374,7 +374,7 @@ class Friends_Post_Collector {
 			}
 		}
 
-		if ( ! $url || ! intval( $_REQUEST['user-id'] ) ) {
+		if ( ! $url || ! intval( $_REQUEST['user'] ) ) {
 			return;
 		}
 
@@ -384,7 +384,7 @@ class Friends_Post_Collector {
 			auth_redirect();
 		}
 
-		$friend_user = new Friend_User( intval( $_REQUEST['user-id'] ) );
+		$friend_user = new Friend_User( intval( $_REQUEST['user'] ) );
 		if ( ! is_wp_error( $friend_user ) || ! $friend_user->has_cap( 'post_collection' ) ) {
 			$this->save_url( $url, $friend_user, $body );
 		}
@@ -421,7 +421,7 @@ class Friends_Post_Collector {
 			$post_data = array(
 				'post_title'    => $title,
 				'post_content'  => $content,
-				'post_date_gmt' => date( 'Y-m-d H:i:s' ),
+				'post_date_gmt' => gmdate( 'Y-m-d H:i:s' ),
 				'post_status'   => 'private',
 				'post_author'   => $friend_user->ID,
 				'guid'          => $item->url,
