@@ -53,6 +53,7 @@ class Friends_Post_Collector {
 		add_action( 'friend_post_edit_link', array( $this, 'allow_post_editing' ), 10, 2 );
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_edit_post_collection' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
+		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
 	}
 
 	/**
@@ -413,8 +414,6 @@ class Friends_Post_Collector {
 				return new WP_Error( 'invalid-content', __( 'No content was extracted.', 'thinkery' ) );
 			}
 
-			$domain = parse_url( $url, PHP_URL_HOST );
-
 			$title   = strip_tags( trim( $item->title ) );
 			$content = trim( wp_kses_post( $item->content ) );
 
@@ -754,6 +753,14 @@ class Friends_Post_Collector {
 		return $html;
 	}
 
+	public function friend_user_role_name( $name, $user ) {
+		if ( ! $name && $user->has_cap( 'post_collection' ) ) {
+			$name = _x( 'Post Collection', 'User role', 'friends' );
+		}
+
+		return $name;
+	}
+
 	/**
 	 * Expose the feed for the specific user.
 	 *
@@ -777,7 +784,6 @@ class Friends_Post_Collector {
 	public static function activate_plugin() {
 		$post_collection = get_role( 'post_collection' );
 		if ( ! $post_collection ) {
-			_x( 'Post Collection', 'User role', 'friends' );
 			$post_collection = add_role( 'post_collection', 'Post Collection' );
 		}
 		$post_collection->add_cap( 'post_collection' );
