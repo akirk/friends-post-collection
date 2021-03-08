@@ -52,6 +52,7 @@ class Friends_Post_Collector {
 		// add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'friend_post_edit_link', array( $this, 'allow_post_editing' ), 10, 2 );
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_edit_post_collection' ) );
+		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 	}
 
 	/**
@@ -79,7 +80,7 @@ class Friends_Post_Collector {
 		$user_id = get_the_author_meta( 'ID' );
 		if ( $this->is_post_collection_user( $user_id ) ) {
 			?>
-			<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php _e( 'Edit Post Collection', 'friends-post-collector' ); ?></a></li>
+			<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php _e( 'Edit Post Collection', 'friends' ); ?></a></li>
 			<?php
 		}
 	}
@@ -106,6 +107,7 @@ class Friends_Post_Collector {
 			$user = new Friend_User( $user_id );
 			$cache[ $user_id ] = $user->has_cap( 'post_collection' );
 		}
+
 		return $cache[ $user_id ];
 	}
 
@@ -134,7 +136,7 @@ class Friends_Post_Collector {
 		if (
 			! $user->has_cap( 'post_collection' )
 		) {
-			wp_die( esc_html__( 'This is not a user related to this plugin.', 'friends-post-collector' ) );
+			wp_die( esc_html__( 'This is not a user related to this plugin.', 'friends' ) );
 		}
 
 		return $user;
@@ -149,7 +151,12 @@ class Friends_Post_Collector {
 		$arg_value = 1;
 
 		if ( isset( $_POST['_wpnonce'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'edit-post-collection-' . $user->ID ) ) {
-			do_action( 'friends_edit_post_collection_after_form_submit', $user );
+
+			if ( isset( $_POST['publish_post_collection'] ) && $_POST['publish_post_collection'] ) {
+				update_user_option( $user->ID, 'friends_publish_post_collection', true );
+			} else {
+				delete_user_option( $user->ID, 'friends_publish_post_collection' );
+			}
 		} else {
 			return;
 		}
@@ -215,21 +222,21 @@ class Friends_Post_Collector {
 
 			add_submenu_page(
 				'friends-settings',
-				__( 'Post Collector', 'friends-post-collector' ),
-				__( 'Post Collector', 'friends-post-collector' ),
+				__( 'Post Collector', 'friends' ),
+				__( 'Post Collector', 'friends' ),
 				'administrator',
 				'friends-post-collector',
 				array( $this, 'about_page' )
 			);
 		} else {
-			$menu_title = __( 'Friends Post Collector', 'friends-post-collector' );
+			$menu_title = __( 'Friends Post Collector', 'friends' );
 			$page_type = sanitize_title( $menu_title );
 
-			add_menu_page( 'friends', __( 'Friends Post Collector', 'friends-post-collector' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3.73 );
+			add_menu_page( 'friends', __( 'Friends Post Collector', 'friends' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3.73 );
 			add_submenu_page(
 				'friends-settings',
-				__( 'About', 'friends-post-collector' ),
-				__( 'About', 'friends-post-collector' ),
+				__( 'About', 'friends' ),
+				__( 'About', 'friends' ),
 				'administrator',
 				'friends-settings',
 				array( $this, 'about_page_with_friends_about' )
@@ -263,58 +270,27 @@ class Friends_Post_Collector {
 	 * @param      bool $display_about_friends  The display about friends section.
 	 */
 	public function about_page( $display_about_friends = false ) {
-		$nonce_value = 'post-collector';
-		if ( isset( $_POST['_wpnonce'] ) && wp_verify_nonce( $_POST['_wpnonce'], $nonce_value ) ) {
-			update_option( 'friends-post-collector_default_user', $_POST['user_id'] );
-		}
-		$default_user = get_option( 'friends-post-collector_default_user' );
 		?>
-	<h1><?php _e( 'Friends Post Collector', 'friends-post-collector' ); ?></h1>
+		<div class="wrap">
+	<h1><?php _e( 'Friends Post Collector', 'friends' ); ?></h1>
 
 	<p><?php _e( 'The Friends Post Collector plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.' ); ?></p>
 
-	<form method="post">
-		<?php wp_nonce_field( $nonce_value ); ?>
-		<table class="form-table">
-			<tbody>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Default User', 'friends-post-collector' ); ?></th>
-					<td>
-						<select name="user_id">
-							<?php foreach ( $this->get_post_collection_users()->get_results() as $potential_default_user ) : ?>
-							<option value="<?php echo esc_attr( $potential_default_user->ID ); ?>" <?php selected( $default_user, $potential_default_user->ID ); ?>><?php echo esc_html( $potential_default_user->display_name ); ?></option>
+	<?php
+	$this->template_loader()->get_template_part(
+		'admin/settings-post-collection',
+		null,
+		array(
+			'post_collections' => $this->get_post_collection_users()->get_results(),
+		)
+	);
 
-						<?php endforeach; ?>
-					</select>
-					<p class="description">
-						<?php
-						echo wp_kses(
-							sprintf(
-									// translators: %s is a role name.
-								__( 'Please select a user under which external posts should be saved by default. Only users with the <em>%s</em> role are shown.', 'friends-post-collector' ),
-								_x( 'Post Collection', 'User role', 'friends-post-collector' )
-							),
-							array( 'em' => array() )
-						);
-						echo ' ';
-						?>
-						<a href="<?php echo esc_url( self_admin_url( 'user-new.php?role=post_collection' ) ); ?>"><?php _e( 'Create another user' ); ?></a></p>
-
-					</td>
-				</tr>
-			</tbody>
-		</table>
-		<p class="submit">
-			<input type="submit" id="submit" class="button button-primary" value="<?php esc_html_e( 'Save Changes', 'friends-post-collector' ); ?>">
-		</p>
-	</form>
-
-		<?php if ( $display_about_friends ) : ?>
+	if ( $display_about_friends ) : ?>
 		<p>
 			<?php
 			echo wp_kses(
 					// translators: %s: URL to the Friends Plugin page on WordPress.org.
-				sprintf( __( 'The Friends plugin is all about connecting with friends and news. Learn more on its <a href=%s>plugin page on WordPress.org</a>.', 'friends-post-collector' ), '"https://wordpress.org/plugins/friends" target="_blank" rel="noopener noreferrer"' ),
+				sprintf( __( 'The Friends plugin is all about connecting with friends and news. Learn more on its <a href=%s>plugin page on WordPress.org</a>.', 'friends' ), '"https://wordpress.org/plugins/friends" target="_blank" rel="noopener noreferrer"' ),
 				array(
 					'a' => array(
 						'href'   => array(),
@@ -330,7 +306,7 @@ class Friends_Post_Collector {
 		<?php
 		echo wp_kses(
 			// translators: %s: URL to the Embed library.
-			sprintf( __( 'This plugin is uses information of the open source project <a href=%s>FTR Site Config</a>.', 'friends-post-collector' ), '"https://github.com/fivefilters/ftr-site-config" target="_blank" rel="noopener noreferrer"' ),
+			sprintf( __( 'This plugin is uses information of the open source project <a href=%s>FTR Site Config</a>.', 'friends' ), '"https://github.com/fivefilters/ftr-site-config" target="_blank" rel="noopener noreferrer"' ),
 			array(
 				'a' => array(
 					'href'   => array(),
@@ -340,7 +316,7 @@ class Friends_Post_Collector {
 			)
 		);
 		?>
-	</p>
+	</p></div>
 		<?php
 	}
 
@@ -369,31 +345,27 @@ class Friends_Post_Collector {
 	 * Display the Bookmarklet at the Tools section of wp-admin
 	 */
 	public function toolbox_bookmarklet() {
-		?>
-		<div class="card">
-			<h2 class="title"><?php _e( 'Friends Post Collector', 'friends-post-collector' ); ?></h2>
-			<h3><?php _e( 'Bookmarklets', 'friends-post-collector' ); ?></h3>
-
-			<p><?php _e( "Drag one of these bookmarklets to your bookmarks bar and click it when you're on an article you want to save from the web.", 'friends-post-collector' ); ?></p>
-			<p>
-				<a href="javascript:<?php echo rawurlencode( trim( str_replace( "document.getElementById( 'friends-post-collector-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( home_url( '/' ) ) . "'", str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', file_get_contents( __DIR__ . '/friends-post-collector-injector.js' ) ) ) ), ';' ) ); ?>" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd;text-decoration: none; margin-right: 3em"><?php echo esc_html_e( 'Collect Post', 'friends-post-collector' ); ?></a>
-			</p>
-			<h3><?php _e( 'Browser Extension', 'friends-post-collector' ); ?></h3>
-
-			<p><?php _e( 'The Friends browser extension also allows to save the currently viewed article.', 'friends-post-collector' ); ?></p>
-			<p>
-				<a href="https://addons.mozilla.org/en-US/firefox/addon/wpfriends/"><?php echo esc_html_e( 'Firefox Extension', 'friends-post-collector' ); ?></a>
-			</p>
-		</div>
-		<?php
+		$post_collections = array();
+		foreach ( $this->get_post_collection_users()->get_results() as $user ) {
+			$url = home_url( '/?user-id=' . $user->ID );
+			$post_collections[ $url ] = $user->display_name;
+		}
+		$this->template_loader()->get_template_part(
+			'admin/tools-post-collection',
+			null,
+			array(
+				'post_collections' => $post_collections,
+				'bookmarklet_js' => str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', file_get_contents( __DIR__ . '/friends-post-collector-injector.js' ) ) ),
+			)
+		);
 	}
 
 	public function save_url_endpoint() {
 		$delimiter = '===BODY===';
 		$url = false;
-		if ( isset( $_GET['friends-save-url'] ) ) {
+		if ( isset( $_REQUEST['friends-save-url'] ) && $_REQUEST['user-id'] ) {
 			list( $last_url, $last_body ) = explode( $delimiter, get_option( 'friends-post-collector_last_save', $delimiter ) );
-			$url = $_GET['friends-save-url'];
+			$url = $_REQUEST['friends-save-url'];
 			$body = false;
 			if ( isset( $_POST['body'] ) ) {
 				$body = $_POST['body'];
@@ -402,7 +374,7 @@ class Friends_Post_Collector {
 			}
 		}
 
-		if ( ! $url ) {
+		if ( ! $url || ! intval( $_REQUEST['user-id'] ) ) {
 			return;
 		}
 
@@ -412,23 +384,25 @@ class Friends_Post_Collector {
 			auth_redirect();
 		}
 
-		$user_id = get_option( 'friends-post-collector_default_user' );
-		$this->save_url( $url, $user_id, $body );
+		$friend_user = new Friend_User( intval( $_REQUEST['user-id'] ) );
+		if ( ! is_wp_error( $friend_user ) || ! $friend_user->has_cap( 'post_collection' ) ) {
+			$this->save_url( $url, $friend_user, $body );
+		}
 	}
 
 	/**
 	 * Download and save the URL content
 	 *
-	 * @param  string $url The URL to save.
-	 * @param      int    $user_id  The user identifier.
+	 * @param  string      $url The URL to save.
+	 * @param  Friend_User $friend_user  The user.
 	 * @return WP_Error    Potentially an error message.
 	 */
-	public function save_url( $url, $user_id, $content = null ) {
+	public function save_url( $url, Friend_User $friend_user, $content = null ) {
 		if ( ! is_string( $url ) || ! wp_http_validate_url( $url ) ) {
 			return new WP_Error( 'invalid-url', __( 'You entered an invalid URL.', 'thinkery' ) );
 		}
 
-		$post_id = Friends::get_instance()->feed->url_to_postid( $url, $user_id );
+		$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
 		if ( is_null( $post_id ) ) {
 			$item = $this->download( $url, $content );
 			if ( is_wp_error( $item ) ) {
@@ -449,7 +423,7 @@ class Friends_Post_Collector {
 				'post_content'  => $content,
 				'post_date_gmt' => date( 'Y-m-d H:i:s' ),
 				'post_status'   => 'private',
-				'post_author'   => $user_id,
+				'post_author'   => $friend_user->ID,
 				'guid'          => $item->url,
 				'post_type'     => Friends::CPT,
 			);
@@ -457,7 +431,6 @@ class Friends_Post_Collector {
 			$post_id = wp_insert_post( $post_data, true );
 		}
 		wp_untrash_post( $post_id );
-		$friend_user = new Friend_User( $user_id );
 		wp_safe_redirect( $friend_user->get_local_friends_page_url( $post_id ) );
 		exit;
 	}
@@ -672,7 +645,7 @@ class Friends_Post_Collector {
 		}
 
 		if ( isset( $site_config['author'] ) ) {
-			$item->author = $xpath->query( str_replace('h2','h1',$site_config['author'] ));
+			$item->author = $xpath->query( str_replace( 'h2', 'h1', $site_config['author'] ) );
 			if ( $item->author ) {
 				$item->author = $this->get_inner_html( $item->author );
 			}
@@ -782,12 +755,29 @@ class Friends_Post_Collector {
 	}
 
 	/**
+	 * Expose the feed for the specific user.
+	 *
+	 * @param      bool   $viewable      Whether it's viewable.
+	 * @param      string $author_login  The author login.
+	 *
+	 * @return     bool    Whether it's viewable.
+	 */
+	function friends_friend_feed_viewable( $viewable, $author_login ) {
+		$author = get_user_by( 'login', $author_login );
+		if ( get_user_option( 'friends_publish_post_collection', $author->ID ) && $author->has_cap( 'post_collection' ) ) {
+			add_filter( 'pre_option_rss_use_excerpt', '__return_true', 30 );
+			return true;
+		}
+		return $viewable;
+	}
+
+	/**
 	 * Actions to take upon plugin activation.
 	 */
 	public static function activate_plugin() {
 		$post_collection = get_role( 'post_collection' );
 		if ( ! $post_collection ) {
-			_x( 'Post Collection', 'User role', 'friends-post-collector' );
+			_x( 'Post Collection', 'User role', 'friends' );
 			$post_collection = add_role( 'post_collection', 'Post Collection' );
 		}
 		$post_collection->add_cap( 'post_collection' );

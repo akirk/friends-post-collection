@@ -23,6 +23,25 @@
 					</fieldset>
 				</td>
 			</tr>
+			<tr>
+				<th><label for="url"><?php esc_html_e( 'Syndicate Posts' ); ?></label></th>
+				<td>
+					<fieldset>
+						<input type="checkbox" name="publish_post_collection" value="1" <?php checked( get_user_option( 'friends_publish_post_collection', $user->ID ) ); ?> />
+						<?php
+						$feed = trailingslashit( $user->get_local_friends_page_url() . 'feed' );
+						echo wp_kses(
+							sprintf(
+							// translators: %s is a URL.
+								__( 'Publish this Post Collection at %s', 'friends' ),
+								'<a href="' . esc_url( $feed ) . '">' . esc_url( $feed ) . '</a>'
+							),
+							array( 'a' => array( 'href' => array() ) )
+						);
+						?>
+					</fieldset>
+				</td>
+			</tr>
 			<?php do_action( 'users_edit_post_collection_table_end', $args['user'] ); ?>
 		</tbody>
 	</table>
