@@ -1,18 +1,3 @@
-var div = document.createElement( 'div' );
-div.setAttribute( 'id', 'friends-post-collector-loader' );
-div.style.position = 'fixed';
-div.style.top = 0;
-div.style.right = 0;
-div.style.width = "100%";
-div.style.backgroundColor = "#000";
-div.style.color = "#EEE";
-div.style.textAlign = "center";
-div.style.fontFamily = "sans-serif";
-div.style.padding = "2em";
-div.style.zIndex = "6999999";
-div.textContent = 'Sending the article to your blog...';
-document.body.appendChild( div );
-
 function post_content( url ) {
 	if ( url.indexOf( '?' ) > 0 ) {
 		url += '&';
@@ -55,7 +40,24 @@ function post_content( url ) {
 		form.submit();
 	} catch ( e ) {
 		document.getElementById( 'friends-post-collector-loader' ).textContent = e;
+		location.href = url;
 	}
 };
+if ( confirm( text.do_you_want_to_send_the_article_to_your_blog ) ) {
+	var div = document.createElement( 'div' );
+	div.setAttribute( 'id', 'friends-post-collector-loader' );
+	div.style.position = 'fixed';
+	div.style.top = 0;
+	div.style.right = 0;
+	div.style.width = '100%';
+	div.style.backgroundColor = '#393';
+	div.style.color = '#eee';
+	div.style.textAlign = 'center';
+	div.style.fontFamily = 'sans-serif';
+	div.style.padding = '1em';
+	div.style.zIndex = 6999999;
+	div.textContent = text.sending_article_to_your_blog;
+	document.body.appendChild( div );
 
-post_content( document.getElementById( 'friends-post-collector-script' ).getAttribute( 'data-post-url' ) );
+	post_content( document.getElementById( 'friends-post-collector-script' ).getAttribute( 'data-post-url' ) );
+}

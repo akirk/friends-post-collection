@@ -8,7 +8,7 @@
  * Description: Collect posts from around the web into your Friends UI.
  *
  * License: GPL2
- * Text Domain: friends-post-collector
+ * Text Domain: friends
  * Domain Path: /languages/
  *
  * @package Friends_Post_Collector

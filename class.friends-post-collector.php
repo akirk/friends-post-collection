@@ -49,11 +49,11 @@ class Friends_Post_Collector {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
 		add_action( 'wp_loaded', array( $this, 'save_url_endpoint' ), 100 );
 		add_filter( 'get_edit_user_link', array( $this, 'edit_post_collection_link' ), 10, 2 );
-		// add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'friend_post_edit_link', array( $this, 'allow_post_editing' ), 10, 2 );
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_edit_post_collection' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
+		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ) );
 	}
 
 	/**
@@ -277,16 +277,17 @@ class Friends_Post_Collector {
 
 	<p><?php _e( 'The Friends Post Collector plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.' ); ?></p>
 
-	<?php
-	$this->template_loader()->get_template_part(
-		'admin/settings-post-collection',
-		null,
-		array(
-			'post_collections' => $this->get_post_collection_users()->get_results(),
-		)
-	);
+		<?php
+		$this->template_loader()->get_template_part(
+			'admin/settings-post-collection',
+			null,
+			array(
+				'post_collections' => $this->get_post_collection_users()->get_results(),
+			)
+		);
 
-	if ( $display_about_friends ) : ?>
+		if ( $display_about_friends ) :
+			?>
 		<p>
 			<?php
 			echo wp_kses(
@@ -302,7 +303,7 @@ class Friends_Post_Collector {
 			);
 			?>
 		</p>
-	<?php endif; ?>
+		<?php endif; ?>
 	<p>
 		<?php
 		echo wp_kses(
@@ -351,12 +352,17 @@ class Friends_Post_Collector {
 			$url = home_url( '/?user=' . $user->ID );
 			$post_collections[ $url ] = $user->display_name;
 		}
+		$js = file_get_contents( __DIR__ . '/friends-post-collector-injector.js' );
+		$js = str_replace( 'text.sending_article_to_your_blog', '"' . addslashes( __( 'Sending the article to your blog...', 'friends' ) ) . '"', $js );
+		$js = str_replace( 'text.do_you_want_to_send_the_article_to_your_blog', '"' . addslashes( __( 'Do you want to send the article on this page to your blog?', 'friends' ) ) . '"', $js );
+		$js = str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', $js ) );
+
 		$this->template_loader()->get_template_part(
 			'admin/tools-post-collection',
 			null,
 			array(
 				'post_collections' => $post_collections,
-				'bookmarklet_js' => str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', file_get_contents( __DIR__ . '/friends-post-collector-injector.js' ) ) ),
+				'bookmarklet_js'   => $js,
 			)
 		);
 	}
@@ -776,6 +782,17 @@ class Friends_Post_Collector {
 			return true;
 		}
 		return $viewable;
+	}
+
+	public function friends_widget_friend_list_after( $widget ) {
+		$post_collections = $this->get_post_collection_users();
+		if ( 0 !== $post_collections->get_total() ) {
+			?>
+			<h5><?php _ex( 'Post Collections', 'widget-header', 'friends' ); ?></h5>
+			<ul class="post-collections-list menu menu-nav">
+			<?php
+			$widget->get_list_items( $post_collections->get_results() );
+		}
 	}
 
 	/**
