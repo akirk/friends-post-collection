@@ -28,7 +28,7 @@
 		<a href="<?php echo esc_url( $feed_url ); ?>"><?php echo esc_html( $feed_url ); ?></a>
 				<?php
 	else :
-			echo _e( 'disabled' );
+			echo _e( 'disabled', 'friends' );
 		endif;
 	?>
 		</td>
@@ -48,7 +48,7 @@
 	<?php endforeach; ?>
 </table>
 <p class="description">
-	<a href="<?php echo esc_url( self_admin_url( 'user-new.php?role=post_collection' ) ); ?>"><?php _e( 'Create another user' ); ?></a></p>
+	<a href="<?php echo esc_url( self_admin_url( 'user-new.php?role=post_collection' ) ); ?>"><?php _e( 'Create another user', 'friends' ); ?></a></p>
 
 </form>
 

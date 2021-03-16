@@ -321,7 +321,7 @@ class Friends_Post_Collection {
 		<div class="wrap">
 	<h1><?php _e( 'Friends Post Collection', 'friends' ); ?></h1>
 
-	<p><?php _e( 'The Friends Post Collection plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.' ); ?></p>
+	<p><?php _e( 'The Friends Post Collection plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.', 'friends' ); ?></p>
 
 		<?php
 		$this->template_loader()->get_template_part(
