@@ -6,20 +6,25 @@
  * @package Friends_Post_Collection
  */
 
-
-?><div class="card">
+?>
+<div class="card">
 	<h2 class="title"><?php _e( 'Friends Post Collector', 'friends-post-collector' ); ?></h2>
 	<h3><?php _e( 'Bookmarklets', 'friends-post-collector' ); ?></h3>
 
 	<p><?php _e( "Drag one of these bookmarklets to your bookmarks bar and click it when you're on an article you want to save from the web.", 'friends-post-collector' ); ?></p>
 	<p>
 		<?php foreach ( $args['post_collections'] as $url => $display_name ) : ?>
-		<a href="javascript:<?php echo rawurlencode( trim( str_replace( "document.getElementById( 'friends-post-collector-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( $url  ) . "'", $args['bookmarklet_js'] ), ';' ) ); ?>" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd;text-decoration: none; margin-right: 3em"><?php echo esc_html(
-			sprintf(
+		<a href="javascript:<?php echo rawurlencode( trim( str_replace( "document.getElementById( 'friends-post-collector-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( $url ) . "'", $args['bookmarklet_js'] ), ';' ) ); ?>" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd;text-decoration: none; margin-right: 3em">
+			<?php
+			echo esc_html(
+				sprintf(
 				// translators: %s is  the name of a Post Collection user.
-			__( 'Save to %s', 'friends-post-collector' ),
-			$display_name
-			) ); ?></a>
+					__( 'Save to %s', 'friends-post-collector' ),
+					$display_name
+				)
+			);
+			?>
+		</a>
 		<?php endforeach; ?>
 	</p>
 	<h3><?php _e( 'Browser Extension', 'friends-post-collector' ); ?></h3>

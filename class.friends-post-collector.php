@@ -50,10 +50,11 @@ class Friends_Post_Collector {
 		add_action( 'wp_loaded', array( $this, 'save_url_endpoint' ), 100 );
 		add_filter( 'get_edit_user_link', array( $this, 'edit_post_collection_link' ), 10, 2 );
 		add_action( 'friend_post_edit_link', array( $this, 'allow_post_editing' ), 10, 2 );
-		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_edit_post_collection' ) );
+		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_post_collection_dropdown_items' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ) );
+		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
 	}
 
 	/**
@@ -77,12 +78,21 @@ class Friends_Post_Collector {
 		return $link;
 	}
 
-	public function add_edit_post_collection() {
+	public function add_post_collection_dropdown_items() {
 		$user_id = get_the_author_meta( 'ID' );
 		if ( $this->is_post_collection_user( $user_id ) ) {
 			?>
 			<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php _e( 'Edit Post Collection', 'friends' ); ?></a></li>
 			<?php
+			if ( 'private' === get_post_status() ) {
+				?>
+				<li class="menu-item"><a href=""><?php _e( 'Make post public', 'friends' ); ?></a></li>
+				<?php
+			} elseif ( 'publish' === get_post_status() ) {
+				?>
+					<li class="menu-item"><a href=""><?php _e( 'Make post private', 'friends' ); ?></a></li>
+				<?php
+			}
 		}
 	}
 
@@ -152,6 +162,12 @@ class Friends_Post_Collector {
 		$arg_value = 1;
 
 		if ( isset( $_POST['_wpnonce'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'edit-post-collection-' . $user->ID ) ) {
+
+			if ( trim( $_POST['display_name'] ) ) {
+				$user->display_name = trim( $_POST['display_name'] );
+			}
+			$user->description = trim( $_POST['description'] );
+			wp_update_user( $user );
 
 			if ( isset( $_POST['publish_post_collection'] ) && $_POST['publish_post_collection'] ) {
 				update_user_option( $user->ID, 'friends_publish_post_collection', true );
@@ -283,6 +299,7 @@ class Friends_Post_Collector {
 			null,
 			array(
 				'post_collections' => $this->get_post_collection_users()->get_results(),
+				'bookmarklet_js'   => $this->get_bookmarklet_js(),
 			)
 		);
 
@@ -343,6 +360,14 @@ class Friends_Post_Collector {
 		return $users;
 	}
 
+	private function get_bookmarklet_js() {
+		$js = file_get_contents( __DIR__ . '/friends-post-collector-injector.js' );
+		$js = str_replace( 'text.sending_article_to_your_blog', '"' . addslashes( __( 'Sending the article to your blog...', 'friends' ) ) . '"', $js );
+		$js = str_replace( 'text.do_you_want_to_send_the_article_to_your_blog', '"' . addslashes( __( 'Do you want to send the article on this page to your blog?', 'friends' ) ) . '"', $js );
+		$js = str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', $js ) );
+		return $js;
+	}
+
 	/**
 	 * Display the Bookmarklet at the Tools section of wp-admin
 	 */
@@ -352,17 +377,13 @@ class Friends_Post_Collector {
 			$url = home_url( '/?user=' . $user->ID );
 			$post_collections[ $url ] = $user->display_name;
 		}
-		$js = file_get_contents( __DIR__ . '/friends-post-collector-injector.js' );
-		$js = str_replace( 'text.sending_article_to_your_blog', '"' . addslashes( __( 'Sending the article to your blog...', 'friends' ) ) . '"', $js );
-		$js = str_replace( 'text.do_you_want_to_send_the_article_to_your_blog', '"' . addslashes( __( 'Do you want to send the article on this page to your blog?', 'friends' ) ) . '"', $js );
-		$js = str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', $js ) );
 
 		$this->template_loader()->get_template_part(
 			'admin/tools-post-collection',
 			null,
 			array(
 				'post_collections' => $post_collections,
-				'bookmarklet_js'   => $js,
+				'bookmarklet_js'   => $this->get_bookmarklet_js(),
 			)
 		);
 	}
@@ -370,9 +391,12 @@ class Friends_Post_Collector {
 	public function save_url_endpoint() {
 		$delimiter = '===BODY===';
 		$url = false;
-		if ( isset( $_REQUEST['friends-save-url'] ) && $_REQUEST['user'] ) {
+		if ( isset( $_REQUEST['collect-post'] ) && isset( $_REQUEST['user'] ) ) {
+			if ( ! intval( $_REQUEST['user'] ) ) {
+				return;
+			}
 			list( $last_url, $last_body ) = explode( $delimiter, get_option( 'friends-post-collector_last_save', $delimiter ) );
-			$url = $_REQUEST['friends-save-url'];
+			$url = $_REQUEST['collect-post'];
 			$body = false;
 			if ( isset( $_POST['body'] ) ) {
 				$body = $_POST['body'];
@@ -381,7 +405,7 @@ class Friends_Post_Collector {
 			}
 		}
 
-		if ( ! $url || ! intval( $_REQUEST['user'] ) ) {
+		if ( ! $url ) {
 			return;
 		}
 
@@ -502,7 +526,7 @@ class Friends_Post_Collector {
 				continue;
 			}
 
-			if ( in_array( $key, array( 'title', 'date', 'body', 'author' ) ) ) {
+			if ( in_array( $key, array( 'title', 'date', 'body', 'author' ), true ) ) {
 				$site_config[ $key ] = $value;
 				continue;
 			}
@@ -531,7 +555,7 @@ class Friends_Post_Collector {
 				continue;
 			}
 
-			if ( in_array( $key, array( 'strip', 'strip_id_or_class' ) ) ) {
+			if ( in_array( $key, array( 'strip', 'strip_id_or_class' ), true ) ) {
 				if ( ! isset( $site_config[ $key ] ) ) {
 					$site_config[ $key ] = array();
 				}
@@ -571,6 +595,7 @@ class Friends_Post_Collector {
 	 * @return object An item object.
 	 */
 	public function download( $url, $content = null ) {
+		global $wp_version;
 		$args = array(
 			'timeout'     => 20,
 			'redirection' => 5,
@@ -784,6 +809,11 @@ class Friends_Post_Collector {
 		return $viewable;
 	}
 
+	/**
+	 * Amend the Friends List widget
+	 *
+	 * @param      object $widget  The widget
+	 */
 	public function friends_widget_friend_list_after( $widget ) {
 		$post_collections = $this->get_post_collection_users();
 		if ( 0 !== $post_collections->get_total() ) {
@@ -792,6 +822,19 @@ class Friends_Post_Collector {
 			<ul class="post-collections-list menu menu-nav">
 			<?php
 			$widget->get_list_items( $post_collections->get_results() );
+		}
+	}
+
+	/**
+	 * Amend the Friends author header.
+	 *
+	 * @param      WP_User $user   The user
+	 */
+	public function friends_author_header( $user ) {
+		if ( $user->has_cap( 'post_collection' ) ) {
+			?>
+			<a class="chip" href="<?php echo esc_attr( get_edit_user_link( $user->ID ) ); ?>"><?php esc_html_e( 'Edit' ); ?></a>
+			<?php
 		}
 	}
 

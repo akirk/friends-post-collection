@@ -11,7 +11,15 @@
 	<table class="form-table">
 		<tbody>
 			<tr>
-				<th><label for="url"><?php esc_html_e( 'Posts' ); ?></label></th>
+				<th><label for="display_name"><?php esc_html_e( 'Display Name', 'friends' ); ?></label></th>
+				<td><input type="text" name="display_name" id="display_name" value="<?php echo esc_attr( $args['user']->display_name ); ?>" class="regular-text" /></td>
+			</tr>
+			<tr>
+				<th><label for="description"><?php esc_html_e( 'Description', 'friends' ); ?></label></th>
+				<td><textarea name="description" id="description" rows="5" cols="30"><?php echo esc_html( $args['user']->description ); ?></textarea></td>
+			</tr>
+			<tr>
+				<th><label><?php esc_html_e( 'Posts' ); ?></label></th>
 				<td>
 					<fieldset>
 					<a href="<?php echo esc_url( $args['user']->get_local_friends_page_url() ); ?>">
@@ -24,12 +32,12 @@
 				</td>
 			</tr>
 			<tr>
-				<th><label for="url"><?php esc_html_e( 'Syndicate Posts' ); ?></label></th>
+				<th><label><?php esc_html_e( 'Syndicate Posts' ); ?></label></th>
 				<td>
 					<fieldset>
-						<input type="checkbox" name="publish_post_collection" value="1" <?php checked( get_user_option( 'friends_publish_post_collection', $user->ID ) ); ?> />
+						<input type="checkbox" name="publish_post_collection" value="1" <?php checked( get_user_option( 'friends_publish_post_collection', $args['user']->ID ) ); ?> />
 						<?php
-						$feed = trailingslashit( $user->get_local_friends_page_url() . 'feed' );
+						$feed = trailingslashit( $args['user']->get_local_friends_page_url() . 'feed' );
 						echo wp_kses(
 							sprintf(
 							// translators: %s is a URL.

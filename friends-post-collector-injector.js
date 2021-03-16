@@ -4,7 +4,7 @@ function post_content( url ) {
 	} else {
 		url += '?';
 	}
-	url += 'friends-save-url=' + encodeURIComponent( location.href );
+	url += 'collect-post=' + encodeURIComponent( location.href );
 	var form = document.createElement( "form" );
 	form.setAttribute( "method", 'post' );
 	form.setAttribute( "action", url );
@@ -34,7 +34,7 @@ function post_content( url ) {
 		} );
 
 		form.appendChild( input( 'body', bodyCopy.documentElement.outerHTML ) );
-		form.appendChild( input( 'friends-save-url', location.href ) );
+		form.appendChild( input( 'collect-post', location.href ) );
 
 		document.body.appendChild( form );
 		form.submit();

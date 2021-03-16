@@ -25,9 +25,12 @@ define( 'FRIENDS_POST_COLLECTOR_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' 
 require_once __DIR__ . '/class.friends-post-collector.php';
 
 add_filter( 'friends_post_collector', '__return_true' );
-add_action( 'friends_init', function( $friends ) {
-	new Friends_Post_Collector( $friends );
-} );
+add_action(
+	'friends_init',
+	function( $friends ) {
+		new Friends_Post_Collector( $friends );
+	}
+);
 
 register_activation_hook( __FILE__, array( 'Friends_Post_Collector', 'activate_plugin' ) );
 
