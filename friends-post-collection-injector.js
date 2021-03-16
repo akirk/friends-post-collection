@@ -21,7 +21,7 @@ function post_content( url ) {
 
 	try {
 		var bodyCopy = document.cloneNode( true );
-		var loader = bodyCopy.getElementById( 'friends-post-collector-loader' );
+		var loader = bodyCopy.getElementById( 'friends-post-collection-loader' );
 		if ( loader ) {
 			loader.parentNode.removeChild( loader );
 		}
@@ -39,13 +39,13 @@ function post_content( url ) {
 		document.body.appendChild( form );
 		form.submit();
 	} catch ( e ) {
-		document.getElementById( 'friends-post-collector-loader' ).textContent = e;
+		document.getElementById( 'friends-post-collection-loader' ).textContent = e;
 		location.href = url;
 	}
 };
 if ( confirm( text.do_you_want_to_send_the_article_to_your_blog ) ) {
 	var div = document.createElement( 'div' );
-	div.setAttribute( 'id', 'friends-post-collector-loader' );
+	div.setAttribute( 'id', 'friends-post-collection-loader' );
 	div.style.position = 'fixed';
 	div.style.top = 0;
 	div.style.right = 0;
@@ -59,5 +59,5 @@ if ( confirm( text.do_you_want_to_send_the_article_to_your_blog ) ) {
 	div.textContent = text.sending_article_to_your_blog;
 	document.body.appendChild( div );
 
-	post_content( document.getElementById( 'friends-post-collector-script' ).getAttribute( 'data-post-url' ) );
+	post_content( document.getElementById( 'friends-post-collection-script' ).getAttribute( 'data-post-url' ) );
 }

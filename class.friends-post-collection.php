@@ -1,10 +1,10 @@
 <?php
 /**
- * Friends Post Collector
+ * Friends Post Collection
  *
- * This contains the post collector functions.
+ * This contains the post collection functions.
  *
- * @package Friends_Post_Collector
+ * @package Friends_Post_Collection
  */
 
 /**
@@ -12,10 +12,10 @@
  *
  * @since 0.1
  *
- * @package Friends_Post_Collector
+ * @package Friends_Post_Collection
  * @author Alex Kirk
  */
-class Friends_Post_Collector {
+class Friends_Post_Collection {
 	/**
 	 * Whether to cache the retrieved users
 	 *
@@ -47,6 +47,7 @@ class Friends_Post_Collector {
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_action( 'user_new_form_tag', array( $this, 'user_new_form_tag' ) );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ), 99999 );
 		add_action( 'wp_loaded', array( $this, 'save_url_endpoint' ), 100 );
 		add_filter( 'get_edit_user_link', array( $this, 'edit_post_collection_link' ), 10, 2 );
 		add_action( 'friend_post_edit_link', array( $this, 'allow_post_editing' ), 10, 2 );
@@ -55,6 +56,9 @@ class Friends_Post_Collector {
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ) );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
+		add_action( 'wp_ajax_friends-post-collection-mark-publish', array( $this, 'wp_ajax_mark_publish' ) );
+		add_action( 'wp_ajax_friends-post-collection-mark-private', array( $this, 'wp_ajax_mark_private' ) );
+		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
 	}
 
 	/**
@@ -65,8 +69,8 @@ class Friends_Post_Collector {
 	public static function template_loader() {
 		static $template_loader;
 		if ( ! isset( $template_loader ) ) {
-			require_once __DIR__ . '/class.friends-post-collector-template-loader.php';
-			$template_loader = new Friends_Post_Collector_Template_Loader();
+			require_once __DIR__ . '/class.friends-post-collection-template-loader.php';
+			$template_loader = new Friends_Post_Collection_Template_Loader();
 		}
 		return $template_loader;
 	}
@@ -86,14 +90,35 @@ class Friends_Post_Collector {
 			<?php
 			if ( 'private' === get_post_status() ) {
 				?>
-				<li class="menu-item"><a href=""><?php _e( 'Make post public', 'friends' ); ?></a></li>
+				<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-publish"><?php _e( 'Make post public', 'friends' ); ?></a></li>
 				<?php
 			} elseif ( 'publish' === get_post_status() ) {
 				?>
-					<li class="menu-item"><a href=""><?php _e( 'Make post private', 'friends' ); ?></a></li>
+					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-private"><?php _e( 'Make post private', 'friends' ); ?></a></li>
 				<?php
 			}
 		}
+
+		foreach ( $this->get_post_collection_users()->get_results() as $user ) {
+			if ( intval( $user_id ) === intval( $user->ID ) ) {
+				continue;
+			}
+			?>
+			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right">
+				  <?php
+					echo esc_html(
+						sprintf(
+						// translators: %s is the name of a post collection.
+							_x( 'Move to %s', 'post-collection', 'friends' ),
+							$user->display_name
+						)
+					);
+					?>
+				<i class="form-icon"></i></a>
+			</li>
+			<?php
+		}
+
 	}
 
 	public function edit_post_collection_link( $link, $user_id ) {
@@ -222,7 +247,7 @@ class Friends_Post_Collector {
 		}
 
 		if ( is_user_logged_in() && Friends::on_frontend() ) {
-			wp_enqueue_script( 'send-to-e-reader', plugins_url( 'friends-post-collector.js', __FILE__ ), array( 'friends' ), 1.0 );
+			wp_enqueue_script( 'send-to-e-reader', plugins_url( 'friends-post-collection.js', __FILE__ ), array( 'friends' ), 1.0 );
 		}
 	}
 
@@ -239,17 +264,17 @@ class Friends_Post_Collector {
 
 			add_submenu_page(
 				'friends-settings',
-				__( 'Post Collector', 'friends' ),
-				__( 'Post Collector', 'friends' ),
+				__( 'Post Collection', 'friends' ),
+				__( 'Post Collection', 'friends' ),
 				'administrator',
-				'friends-post-collector',
+				'friends-post-collection',
 				array( $this, 'about_page' )
 			);
 		} else {
-			$menu_title = __( 'Friends Post Collector', 'friends' );
+			$menu_title = __( 'Friends Post Collection', 'friends' );
 			$page_type = sanitize_title( $menu_title );
 
-			add_menu_page( 'friends', __( 'Friends Post Collector', 'friends' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3.73 );
+			add_menu_page( 'friends', __( 'Friends Post Collection', 'friends' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3.73 );
 			add_submenu_page(
 				'friends-settings',
 				__( 'About', 'friends' ),
@@ -289,9 +314,9 @@ class Friends_Post_Collector {
 	public function about_page( $display_about_friends = false ) {
 		?>
 		<div class="wrap">
-	<h1><?php _e( 'Friends Post Collector', 'friends' ); ?></h1>
+	<h1><?php _e( 'Friends Post Collection', 'friends' ); ?></h1>
 
-	<p><?php _e( 'The Friends Post Collector plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.' ); ?></p>
+	<p><?php _e( 'The Friends Post Collection plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.' ); ?></p>
 
 		<?php
 		$this->template_loader()->get_template_part(
@@ -361,7 +386,7 @@ class Friends_Post_Collector {
 	}
 
 	private function get_bookmarklet_js() {
-		$js = file_get_contents( __DIR__ . '/friends-post-collector-injector.js' );
+		$js = file_get_contents( __DIR__ . '/friends-post-collection-injector.js' );
 		$js = str_replace( 'text.sending_article_to_your_blog', '"' . addslashes( __( 'Sending the article to your blog...', 'friends' ) ) . '"', $js );
 		$js = str_replace( 'text.do_you_want_to_send_the_article_to_your_blog', '"' . addslashes( __( 'Do you want to send the article on this page to your blog?', 'friends' ) ) . '"', $js );
 		$js = str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', $js ) );
@@ -395,7 +420,7 @@ class Friends_Post_Collector {
 			if ( ! intval( $_REQUEST['user'] ) ) {
 				return;
 			}
-			list( $last_url, $last_body ) = explode( $delimiter, get_option( 'friends-post-collector_last_save', $delimiter ) );
+			list( $last_url, $last_body ) = explode( $delimiter, get_option( 'friends-post-collection_last_save', $delimiter ) );
 			$url = $_REQUEST['collect-post'];
 			$body = false;
 			if ( isset( $_POST['body'] ) ) {
@@ -409,7 +434,7 @@ class Friends_Post_Collector {
 			return;
 		}
 
-		update_option( 'friends-post-collector_last_save', $_POST['url'] . $delimiter . $_POST['body'] );
+		update_option( 'friends-post-collection_last_save', $_POST['url'] . $delimiter . $_POST['body'] );
 
 		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
 			auth_redirect();
@@ -838,6 +863,65 @@ class Friends_Post_Collector {
 		}
 	}
 
+	function wp_ajax_mark_private() {
+		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+			wp_send_json_error( 'error' );
+		}
+
+		$post = get_post( $_POST['id'] );
+		$post->post_status = 'private';
+		wp_update_post( $post );
+
+		wp_send_json_success( array(
+			'new_text' => __( 'Make post public', 'friends' ),
+		) );
+	}
+
+	function wp_ajax_mark_publish() {
+		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+			wp_send_json_error( 'error' );
+		}
+
+		$post = get_post( $_POST['id'] );
+		$post->post_status = 'publish';
+		wp_update_post( $post );
+
+		wp_send_json_success( array(
+			'new_text' => __( 'Make post private', 'friends' ),
+		) );
+	}
+
+	function wp_ajax_change_author() {
+		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+			wp_send_json_error( 'error' );
+		}
+
+		$user = new WP_User( $_POST['author'] );
+		if ( is_wp_error( $user ) ) {
+			wp_send_json_error( 'error' );
+		}
+		if ( ! Friend_User::is_friends_plugin_user( $user ) && ! $user->has_cap( 'post_collection' ) ) {
+			wp_send_json_error( 'error' );
+		}
+
+		$post = get_post( $_POST['id'] );
+		$old_author = $post->post_author;
+		$post->post_author = $user->ID;
+		wp_update_post( $post );
+
+		$first = new WP_User( $_POST['first'] );
+		$move_to = sprintf(
+		// translators: %s is the name of a post collection.
+			_x( 'Move to %s', 'post-collection', 'friends' ),
+			$first->display_name
+		);
+
+		wp_send_json_success( array(
+			'new_text' => intval( $old_author ) !== $first->ID ? __( 'Undo' ) : $move_to,
+			'old_author' => $old_author,
+		) );
+	}
+
 	/**
 	 * Actions to take upon plugin activation.
 	 */
@@ -848,7 +932,7 @@ class Friends_Post_Collector {
 		}
 		$post_collection->add_cap( 'post_collection' );
 		$post_collection->add_cap( 'level_0' );
-		$default_user_id = get_option( 'friends-post-collector_default_user' );
+		$default_user_id = get_option( 'friends-post-collection_default_user' );
 		$default_user = false;
 		if ( $default_user_id ) {
 			$default_user = new WP_User( $default_user_id );
@@ -864,7 +948,7 @@ class Friends_Post_Collector {
 				'role'         => 'post_collection',
 			);
 			$user_id = wp_insert_user( $userdata );
-			update_option( 'friends-post-collector_default_user', $user_id );
+			update_option( 'friends-post-collection_default_user', $user_id );
 		}
 	}
 }

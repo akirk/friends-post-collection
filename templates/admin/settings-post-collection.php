@@ -32,12 +32,12 @@
 		endif;
 	?>
 		</td>
-		<td><a href="javascript:<?php echo rawurlencode( trim( str_replace( "document.getElementById( 'friends-post-collector-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( home_url( '/?user=' . $user->ID ) ) . "'", $args['bookmarklet_js'] ), ';' ) ); ?>">
+		<td><a href="javascript:<?php echo rawurlencode( trim( str_replace( "document.getElementById( 'friends-post-collection-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( home_url( '/?user=' . $user->ID ) ) . "'", $args['bookmarklet_js'] ), ';' ) ); ?>">
 			<?php
 			echo esc_html(
 				sprintf(
 				// translators: %s is  the name of a Post Collection user.
-					__( 'Save to %s', 'friends-post-collector' ),
+					__( 'Save to %s', 'friends-post-collection' ),
 					$user->display_name
 				)
 			);

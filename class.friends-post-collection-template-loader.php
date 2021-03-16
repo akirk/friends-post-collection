@@ -18,7 +18,7 @@
  * @package Friends
  * @author  Alex Kirk
  */
-class Friends_Post_Collector_Template_Loader extends Friends_Template_Loader {
+class Friends_Post_Collection_Template_Loader extends Friends_Template_Loader {
 	/**
 	 * Reference to the root directory path of this plugin.
 	 *
@@ -30,5 +30,5 @@ class Friends_Post_Collector_Template_Loader extends Friends_Template_Loader {
 	 *
 	 * @var string
 	 */
-	protected $plugin_directory = FRIENDS_POST_COLLECTOR_PLUGIN_DIR;
+	protected $plugin_directory = FRIENDS_POST_COLLECTION_PLUGIN_DIR;
 }
