@@ -83,8 +83,11 @@ class Friends_Post_Collection {
 	}
 
 	public function add_post_collection_dropdown_items() {
+		$divider = '<li class="divider" data-content="' . esc_attr__( 'Post Collection', 'friends' ) . '"></li>';
 		$user_id = get_the_author_meta( 'ID' );
 		if ( $this->is_post_collection_user( $user_id ) ) {
+			echo $divider;
+			$divider = '';
 			?>
 			<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php _e( 'Edit Post Collection', 'friends' ); ?></a></li>
 			<?php
@@ -103,6 +106,8 @@ class Friends_Post_Collection {
 			if ( intval( $user_id ) === intval( $user->ID ) ) {
 				continue;
 			}
+			echo $divider;
+			$divider = '';
 			?>
 			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right">
 				  <?php
