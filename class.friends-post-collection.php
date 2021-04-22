@@ -55,7 +55,7 @@ class Friends_Post_Collection {
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_post_collection_dropdown_items' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
-		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ) );
+		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-publish', array( $this, 'wp_ajax_mark_publish' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-private', array( $this, 'wp_ajax_mark_private' ) );
@@ -994,16 +994,28 @@ class Friends_Post_Collection {
 	/**
 	 * Amend the Friends List widget
 	 *
-	 * @param      object $widget  The widget
+	 * @param object $widget  The widget
+	 * @param array  $args Sidebar arguments.
 	 */
-	public function friends_widget_friend_list_after( $widget ) {
+	public function friends_widget_friend_list_after( $widget, $args ) {
 		$post_collections = $this->get_post_collection_users();
 		if ( 0 !== $post_collections->get_total() ) {
 			?>
-			<h5><?php _ex( 'Post Collections', 'widget-header', 'friends' ); ?></h5>
-			<ul class="post-collections-list menu menu-nav">
+			<details class="accordion" open>
+				<summary class="accordion-header">
+					<?php
+					echo $args['before_title'];
+					echo esc_html( _ex( 'Post Collections', 'widget-header', 'friends' ) );
+					echo $args['after_title'];
+					?>
+				</summary>
+				<ul class="subscriptions-list menu menu-nav accordion-body">
+					<?php
+					$widget->get_list_items( $post_collections->get_results() );
+					?>
+				</ul>
+			</details>
 			<?php
-			$widget->get_list_items( $post_collections->get_results() );
 		}
 	}
 
