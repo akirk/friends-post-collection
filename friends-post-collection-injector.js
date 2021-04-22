@@ -5,25 +5,30 @@ function post_content( url ) {
 		url += '?';
 	}
 	url += 'collect-post=' + encodeURIComponent( location.href );
-	var form = document.createElement( "form" );
-	form.setAttribute( "method", 'post' );
-	form.setAttribute( "action", url );
-	form.setAttribute( "target", "_self" );
-	form.setAttribute( "accept-charset", "UTF-8" );
+	var form = window.document.createElement( 'form' );
+	form.setAttribute( 'id', 'body-copy' );
+	form.setAttribute( 'method', 'post' );
+	form.setAttribute( 'action', url );
+	form.setAttribute( 'target', '_blank' );
+	form.setAttribute( 'accept-charset', 'UTF-8' );
 
 	function input( key, value ) {
-		var input = document.createElement( "input" );
-		input.setAttribute( "type", "hidden" );
-		input.setAttribute( "name", key );
-		input.setAttribute( "value", value );
+		var input = window.document.createElement( 'input' );
+		input.setAttribute( 'type', 'hidden' );
+		input.setAttribute( 'name', key );
+		input.setAttribute( 'value', value );
 		return input;
 	}
 
 	try {
-		var bodyCopy = document.cloneNode( true );
+		var bodyCopy = window.document.cloneNode( true );
 		var loader = bodyCopy.getElementById( 'friends-post-collection-loader' );
 		if ( loader ) {
 			loader.parentNode.removeChild( loader );
+		}
+		var previousCopy = bodyCopy.getElementById( 'body-copy' );
+		if ( previousCopy ) {
+			previousCopy.parentNode.removeChild( previousCopy );
 		}
 
 		['script', 'style', 'canvas', 'select', 'textarea'].forEach( function( tagName ) {
@@ -36,15 +41,15 @@ function post_content( url ) {
 		form.appendChild( input( 'body', bodyCopy.documentElement.outerHTML ) );
 		form.appendChild( input( 'collect-post', location.href ) );
 
-		document.body.appendChild( form );
+		window.document.body.appendChild( form );
 		form.submit();
 	} catch ( e ) {
-		document.getElementById( 'friends-post-collection-loader' ).textContent = e;
-		location.href = url;
+		window.document.getElementById( 'friends-post-collection-loader' ).textContent = e;
+		location.href = url + '&error=' + escape( e );
 	}
 };
 if ( confirm( text.do_you_want_to_send_the_article_to_your_blog ) ) {
-	var div = document.createElement( 'div' );
+	var div = window.document.createElement( 'div' );
 	div.setAttribute( 'id', 'friends-post-collection-loader' );
 	div.style.position = 'fixed';
 	div.style.top = 0;
@@ -57,7 +62,7 @@ if ( confirm( text.do_you_want_to_send_the_article_to_your_blog ) ) {
 	div.style.padding = '1em';
 	div.style.zIndex = 6999999;
 	div.textContent = text.sending_article_to_your_blog;
-	document.body.appendChild( div );
+	window.document.body.appendChild( div );
 
-	post_content( document.getElementById( 'friends-post-collection-script' ).getAttribute( 'data-post-url' ) );
+	post_content( window.document.getElementById( 'friends-post-collection-script' ).getAttribute( 'data-post-url' ) );
 }

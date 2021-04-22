@@ -46,6 +46,7 @@ class Friends_Post_Collection {
 	private function register_hooks() {
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_action( 'user_new_form_tag', array( $this, 'user_new_form_tag' ) );
+		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ), 99999 );
 		add_action( 'wp_loaded', array( $this, 'save_url_endpoint' ), 100 );
@@ -152,7 +153,6 @@ class Friends_Post_Collection {
 		return $cache[ $user_id ];
 	}
 
-
 	/**
 	 * Process access for the Friends Edit User page
 	 */
@@ -246,6 +246,109 @@ class Friends_Post_Collection {
 		$this->template_loader()->get_template_part( 'admin/edit-post-collection', null, $args );
 	}
 
+	/**
+	 * Process access for the Friends create User page
+	 */
+	private function check_create_post_collection() {
+		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to create this user.' ) );
+		}
+
+		$user = (object) array(
+			'user_login'   => null,
+			'display_name' => null,
+		);
+		if ( isset( $_POST['display_name'] ) ) {
+			$user->display_name = sanitize_text_field( $_POST['display_name'] );
+		}
+
+		if ( isset( $_POST['user_login'] ) ) {
+			$user->user_login = sanitize_user( $_POST['user_login'] );
+			if ( ! $user->user_login && $user->display_name ) {
+				$user->user_login = Friend_User::sanitize_username( $user->display_name );
+			}
+		}
+		return $user;
+	}
+
+	/**
+	 * Process the Friends Create Post Collection page
+	 */
+	public function process_create_post_collection() {
+		$errors = new WP_Error;
+		$user   = $this->check_create_post_collection();
+
+		if ( ! $user->user_login ) {
+			$errors->add( 'user_login', __( '<strong>Error</strong>: This username is invalid because it uses illegal characters. Please enter a valid username.' ) );
+		} elseif ( username_exists( $user->user_login ) ) {
+			$errors->add( 'user_login', __( '<strong>Error</strong>: This username is already registered. Please choose another one.' ) );
+		} elseif ( ! $user->display_name ) {
+			$errors->add( 'user_login', __( '<strong>Error</strong>: Please enter a valid display name.' ) );
+		}
+
+		if ( ! $errors->has_errors() ) {
+			$userdata  = array(
+				'user_login'   => $user->user_login,
+				'display_name' => $user->display_name,
+				'user_pass'    => wp_generate_password( 256 ),
+				'role'         => 'post_collection',
+			);
+			$user_id = wp_insert_user( $userdata );
+			if ( is_wp_error( $user_id ) ) {
+				return $user_id;
+			}
+			wp_safe_redirect( self_admin_url( 'admin.php?page=edit-post-collection&user=' . $user_id ) );
+			exit;
+		}
+
+		return $errors;
+	}
+
+	public function render_create_post_collection() {
+		$response = null;
+		$user     = $this->check_create_post_collection();
+
+		if ( ! empty( $_POST ) ) {
+			if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'create-post-collection' ) ) {
+				$response = new WP_Error( 'invalid-nonce', __( 'For security reasons, please verify the URL and click next if you want to proceed.', 'friends' ) );
+			} else {
+				$response = $this->process_create_post_collection();
+			}
+		}
+
+		?>
+		<h1><?php esc_html_e( 'Create Post Collection', 'friends' ); ?></h1>
+		<?php
+
+		if ( is_wp_error( $response ) ) {
+			?>
+			<div id="message" class="updated notice is-dismissible"><p>
+			<?php
+			echo wp_kses(
+				$response->get_error_message(),
+				array(
+					'strong' => array(),
+					'a'      => array(
+						'href'   => array(),
+						'rel'    => array(),
+						'target' => array(),
+					),
+				)
+			);
+			?>
+				</p>
+			</div>
+			<?php
+		}
+
+		$args = array(
+			'user_login'   => $user->user_login,
+			'display_name' => $user->display_name,
+		);
+
+		$this->template_loader()->get_template_part( 'admin/create-post-collection', null, $args );
+	}
+
 	public function enqueue_scripts() {
 		if ( ! class_exists( 'Friends' ) ) {
 			return;
@@ -291,24 +394,48 @@ class Friends_Post_Collection {
 
 		}
 
+		if ( isset( $_GET['page'] ) && 0 === strpos( $_GET['page'], 'create-post-collection' ) ) {
+			add_submenu_page( 'friends-settings', __( 'Create Post Collection', 'friends' ), __( 'Create Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'create-post-collection', array( $this, 'render_create_post_collection' ) );
+			add_action( 'load-' . $page_type . '_page_create-post-collection', array( $this, 'process_create_post_collection' ) );
+		}
+
 		if ( isset( $_GET['page'] ) && 0 === strpos( $_GET['page'], 'edit-post-collection' ) ) {
-			add_submenu_page( 'friends-settings', __( 'Edit User', 'friends' ), __( 'Edit User', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
+			add_submenu_page( 'friends-settings', __( 'Edit Post Collection', 'friends' ), __( 'Edit Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_edit-post-collection', array( $this, 'process_edit_post_collection' ) );
 		}
 	}
 
 	/**
-	 * Enable pre-filling the role in the new user form.
+	 * Add actions to the user rows
+	 *
+	 * @param  array   $actions The existing actions.
+	 * @param  WP_User $user    The user in question.
+	 * @return array The extended actions.
 	 */
-	function user_new_form_tag() {
-		if ( isset( $_GET['role'] ) && 'post_collection' === $_GET['role'] ) {
-			add_filter(
-				'pre_option_default_role',
-				function() {
-					return 'post_collection';
-				}
-			);
+	public function user_row_actions( array $actions, WP_User $user ) {
+		if (
+			! current_user_can( Friends::REQUIRED_ROLE ) ||
+			(
+				! $user->has_cap( 'post_collection' )
+			)
+		) {
+			return $actions;
 		}
+
+		if ( is_multisite() ) {
+			if ( is_super_admin( $user->ID ) ) {
+				return $actions;
+			}
+
+			$actions = array_merge( array( 'edit' => '<a href="' . esc_url( self_admin_url( 'admin.php?page=edit-post-collection&user=' . $user->ID ) ) . '">' . __( 'Edit' ) . '</a>' ), $actions );
+		}
+
+		$friend_user = new Friend_User( $user );
+		$actions['view'] = '<a href="' . esc_url( $friend_user->get_local_friends_page_url() ) . '">' . __( 'View' ) . '</a>';
+
+		unset( $actions['resetpassword'] );
+
+		return $actions;
 	}
 
 	/**
@@ -319,53 +446,54 @@ class Friends_Post_Collection {
 	public function about_page( $display_about_friends = false ) {
 		?>
 		<div class="wrap">
-	<h1><?php _e( 'Friends Post Collection', 'friends' ); ?></h1>
+			<h1><?php _e( 'Friends Post Collection', 'friends' ); ?></h1>
 
-	<p><?php _e( 'The Friends Post Collection plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.', 'friends' ); ?></p>
+			<p><?php _e( 'The Friends Post Collection plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.', 'friends' ); ?></p>
 
-		<?php
-		$this->template_loader()->get_template_part(
-			'admin/settings-post-collection',
-			null,
-			array(
-				'post_collections' => $this->get_post_collection_users()->get_results(),
-				'bookmarklet_js'   => $this->get_bookmarklet_js(),
-			)
-		);
-
-		if ( $display_about_friends ) :
-			?>
-		<p>
 			<?php
-			echo wp_kses(
-					// translators: %s: URL to the Friends Plugin page on WordPress.org.
-				sprintf( __( 'The Friends plugin is all about connecting with friends and news. Learn more on its <a href=%s>plugin page on WordPress.org</a>.', 'friends' ), '"https://wordpress.org/plugins/friends" target="_blank" rel="noopener noreferrer"' ),
+			$this->template_loader()->get_template_part(
+				'admin/settings-post-collection',
+				null,
 				array(
-					'a' => array(
-						'href'   => array(),
-						'rel'    => array(),
-						'target' => array(),
-					),
+					'post_collections' => $this->get_post_collection_users()->get_results(),
+					'bookmarklet_js'   => $this->get_bookmarklet_js(),
 				)
 			);
-			?>
-		</p>
-		<?php endif; ?>
-	<p>
-		<?php
-		echo wp_kses(
-			// translators: %s: URL to the Embed library.
-			sprintf( __( 'This plugin is uses information of the open source project <a href=%s>FTR Site Config</a>.', 'friends' ), '"https://github.com/fivefilters/ftr-site-config" target="_blank" rel="noopener noreferrer"' ),
-			array(
-				'a' => array(
-					'href'   => array(),
-					'rel'    => array(),
-					'target' => array(),
-				),
-			)
-		);
-		?>
-	</p></div>
+
+			if ( $display_about_friends ) :
+				?>
+				<p>
+				<?php
+				echo wp_kses(
+						// translators: %s: URL to the Friends Plugin page on WordPress.org.
+					sprintf( __( 'The Friends plugin is all about connecting with friends and news. Learn more on its <a href=%s>plugin page on WordPress.org</a>.', 'friends' ), '"https://wordpress.org/plugins/friends" target="_blank" rel="noopener noreferrer"' ),
+					array(
+						'a' => array(
+							'href'   => array(),
+							'rel'    => array(),
+							'target' => array(),
+						),
+					)
+				);
+				?>
+				</p>
+			<?php endif; ?>
+			<p>
+				<?php
+				echo wp_kses(
+					// translators: %s: URL to the Embed library.
+					sprintf( __( 'This plugin is uses information of the open source project <a href=%s>FTR Site Config</a>.', 'friends' ), '"https://github.com/fivefilters/ftr-site-config" target="_blank" rel="noopener noreferrer"' ),
+					array(
+						'a' => array(
+							'href'   => array(),
+							'rel'    => array(),
+							'target' => array(),
+						),
+					)
+				);
+				?>
+			</p>
+		</div>
 		<?php
 	}
 
@@ -439,7 +567,7 @@ class Friends_Post_Collection {
 			return;
 		}
 
-		update_option( 'friends-post-collection_last_save', $_POST['url'] . $delimiter . $_POST['body'] );
+		update_option( 'friends-post-collection_last_save', $_REQUEST['collect-post'] . $delimiter . $_POST['body'] );
 
 		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
 			auth_redirect();
@@ -488,6 +616,10 @@ class Friends_Post_Collection {
 			);
 
 			$post_id = wp_insert_post( $post_data, true );
+
+			if ( $item->author ) {
+				update_post_meta( $post_id, 'author', $item->author );
+			}
 		}
 		wp_untrash_post( $post_id );
 		wp_safe_redirect( $friend_user->get_local_friends_page_url( $post_id ) );
@@ -638,6 +770,7 @@ class Friends_Post_Collection {
 		if ( isset( $site_config['http_header'] ) ) {
 			$args['headers'] = array_merge( $args['headers'], $site_config['http_header'] );
 		}
+
 		if ( ! $content ) {
 			$response = wp_safe_remote_get( $url, $args );
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
@@ -646,7 +779,7 @@ class Friends_Post_Collection {
 			$content = wp_remote_retrieve_body( $response );
 		}
 
-		$item      = $this->extract_content( $content, $site_config );
+		$item      = $this->extract_content( $content, $url, $site_config );
 		$item->url = $url;
 		return $item;
 
@@ -659,7 +792,7 @@ class Friends_Post_Collection {
 	 * @param  array  $site_config The site config.
 	 * @return object The parsed content.
 	 */
-	public function extract_content( $html, $site_config = array() ) {
+	public function extract_content( $html, $url, $site_config = array() ) {
 		if ( ! $site_config ) {
 			$site_config = array();
 		}
@@ -679,9 +812,15 @@ class Friends_Post_Collection {
 			require_once __DIR__ . '/lib/PressForward-Readability/Readability.php';
 		}
 
+		if ( ! class_exists( 'HTML5_Parser', false ) ) {
+			require_once __DIR__ . '/lib/HTML5/Parser.php';
+		}
+
 		set_error_handler( '__return_null' );
-		$readability = new Readability( '<?xml encoding="utf-8" ?>' . $html );
+		$readability = new Readability( '<' . '?xml encoding="utf-8" ?' . '>' . stripslashes( $html ), $url, 'html5lib' );
 		restore_error_handler();
+		$dom = new DOMDocument( '<' . '?xml encoding="utf-8" ?' . '>' . ( $html ) );
+		$xpath = new DOMXpath( $readability->dom );
 		$xpath = new DOMXpath( $readability->dom );
 
 		if ( isset( $site_config['strip_id_or_class'] ) ) {
@@ -696,7 +835,6 @@ class Friends_Post_Collection {
 				$this->remove_node( $xpath->query( $xp ) );
 			}
 		}
-
 		if ( isset( $site_config['title'] ) ) {
 			$item->title = $xpath->query( $site_config['title'] );
 			if ( $item->title ) {
@@ -715,6 +853,13 @@ class Friends_Post_Collection {
 			$item->content = $xpath->query( $site_config['body'] );
 			if ( $item->content ) {
 				$item->content = $this->get_inner_html( $item->content );
+			}
+		}
+
+		if ( ! $item->author ) {
+			$item->author = $xpath->query( "//article//*[contains(concat(' ',normalize-space(@class),' '),' entry-author ')]" );
+			if ( $item->author ) {
+				$item->author = $item->author[0]->textContent;
 			}
 		}
 
@@ -757,6 +902,13 @@ class Friends_Post_Collection {
 			}
 		}
 
+		if ( ! $item->title ) {
+			$item->title = $xpath->query( '//meta[@property="og:title"]/@content' );
+			if ( $item->title ) {
+				$item->title = $this->get_inner_html( $item->title );
+			}
+		}
+
 		return $item;
 	}
 
@@ -779,7 +931,7 @@ class Friends_Post_Collection {
 		foreach ( $nodelist as $child ) {
 			$html .= $child->innerHTML; // @codingStandardsIgnoreLine
 		}
-
+		return $html;
 		return $this->clean_html( $html );
 	}
 
@@ -877,9 +1029,11 @@ class Friends_Post_Collection {
 		$post->post_status = 'private';
 		wp_update_post( $post );
 
-		wp_send_json_success( array(
-			'new_text' => __( 'Make post public', 'friends' ),
-		) );
+		wp_send_json_success(
+			array(
+				'new_text' => __( 'Make post public', 'friends' ),
+			)
+		);
 	}
 
 	function wp_ajax_mark_publish() {
@@ -891,9 +1045,11 @@ class Friends_Post_Collection {
 		$post->post_status = 'publish';
 		wp_update_post( $post );
 
-		wp_send_json_success( array(
-			'new_text' => __( 'Make post private', 'friends' ),
-		) );
+		wp_send_json_success(
+			array(
+				'new_text' => __( 'Make post private', 'friends' ),
+			)
+		);
 	}
 
 	function wp_ajax_change_author() {
@@ -921,10 +1077,12 @@ class Friends_Post_Collection {
 			$first->display_name
 		);
 
-		wp_send_json_success( array(
-			'new_text' => intval( $old_author ) !== $first->ID ? __( 'Undo' ) : $move_to,
-			'old_author' => $old_author,
-		) );
+		wp_send_json_success(
+			array(
+				'new_text'   => intval( $old_author ) !== $first->ID ? __( 'Undo' ) : $move_to,
+				'old_author' => $old_author,
+			)
+		);
 	}
 
 	/**

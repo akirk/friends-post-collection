@@ -32,7 +32,7 @@
 		endif;
 	?>
 		</td>
-		<td><a href="javascript:<?php echo rawurlencode( trim( str_replace( "document.getElementById( 'friends-post-collection-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( home_url( '/?user=' . $user->ID ) ) . "'", $args['bookmarklet_js'] ), ';' ) ); ?>">
+		<td><a href="javascript:<?php echo rawurlencode( trim( str_replace( "window.document.getElementById( 'friends-post-collection-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( home_url( '/?user=' . $user->ID ) ) . "'", $args['bookmarklet_js'] ), ';' ) ); ?>">
 			<?php
 			echo esc_html(
 				sprintf(
@@ -48,7 +48,7 @@
 	<?php endforeach; ?>
 </table>
 <p class="description">
-	<a href="<?php echo esc_url( self_admin_url( 'user-new.php?role=post_collection' ) ); ?>"><?php _e( 'Create another user', 'friends' ); ?></a></p>
+	<a href="<?php echo esc_url( self_admin_url( 'admin.php?page=create-post-collection' ) ); ?>"><?php _e( 'Create another user', 'friends' ); ?></a></p>
 
 </form>
 
