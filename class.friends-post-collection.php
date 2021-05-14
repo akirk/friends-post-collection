@@ -55,6 +55,7 @@ class Friends_Post_Collection {
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_post_collection_dropdown_items' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
+		add_action( 'friends_override_author_name', array( $this, 'friends_override_author_name' ), 15, 3 );
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-publish', array( $this, 'wp_ajax_mark_publish' ) );
@@ -966,12 +967,49 @@ class Friends_Post_Collection {
 		return $html;
 	}
 
-	public function friend_user_role_name( $name, $user ) {
+	/**
+	 * Overwrite the role name for a post collection user.
+	 *
+	 * @param      string  $name   The name.
+	 * @param      WP_User $user   The user
+	 *
+	 * @return     string The potentially modified name.
+	 */
+	public function friend_user_role_name( $name, WP_User $user ) {
 		if ( ! $name && $user->has_cap( 'post_collection' ) ) {
 			$name = _x( 'Post Collection', 'User role', 'friends' );
 		}
 
 		return $name;
+	}
+
+
+	/**
+	 * Potentially override the post author name with metadata.
+	 *
+	 * @param      string $overridden_author_name  The already overridden author name.
+	 * @param      string $author_name  The author name.
+	 * @param      int    $post_id      The post id.
+	 *
+	 * @return     string  The modified author name.
+	 */
+	public function friends_override_author_name( $overridden_author_name, $author_name, $post_id ) {
+		if ( $overridden_author_name && $overridden_author_name !== $author_name ) {
+			return $overridden_author_name;
+		}
+		$post = get_post( $post_id );
+		$author = new WP_User( $post->post_author );
+		if ( is_wp_error( $author ) ) {
+			return $author_name;
+		}
+
+		if ( ! $author->has_cap( 'post_collection' ) ) {
+			return $author_name;
+		}
+
+		$host = wp_parse_url( $post->guid, PHP_URL_HOST );
+
+		return sanitize_text_field( preg_replace( '#^www\.#', '', preg_replace( '#[^a-z0-9.-]+#i', ' ', strtolower( $host ) ) ) );
 	}
 
 	/**
