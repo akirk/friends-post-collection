@@ -568,7 +568,9 @@ class Friends_Post_Collection {
 			return;
 		}
 
-		update_option( 'friends-post-collection_last_save', $_REQUEST['collect-post'] . $delimiter . $_POST['body'] );
+		if ( $body ) {
+			update_option( 'friends-post-collection_last_save', $_REQUEST['collect-post'] . $delimiter . $body );
+		}
 
 		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
 			auth_redirect();
@@ -589,7 +591,7 @@ class Friends_Post_Collection {
 	 */
 	public function save_url( $url, Friend_User $friend_user, $content = null ) {
 		if ( ! is_string( $url ) || ! wp_http_validate_url( $url ) ) {
-			return new WP_Error( 'invalid-url', __( 'You entered an invalid URL.', 'thinkery' ) );
+			return new WP_Error( 'invalid-url', __( 'You entered an invalid URL.', 'friends-post-collection' ) );
 		}
 
 		$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
@@ -600,7 +602,7 @@ class Friends_Post_Collection {
 			}
 
 			if ( ! $item->content && ! $item->title ) {
-				return new WP_Error( 'invalid-content', __( 'No content was extracted.', 'thinkery' ) );
+				return new WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends-post-collection' ) );
 			}
 
 			$title   = strip_tags( trim( $item->title ) );
@@ -628,130 +630,6 @@ class Friends_Post_Collection {
 	}
 
 	/**
-	 * Download site config for a URL if it exists
-	 *
-	 * @param  string $filename The filename to download.
-	 * @return string|false The site config.
-	 */
-	public function download_site_config( $filename ) {
-		$response = wp_safe_remote_get(
-			'https://raw.githubusercontent.com/fivefilters/ftr-site-config/master/' . $filename,
-			array(
-				'timeout'     => 20,
-				'redirection' => 5,
-			)
-		);
-
-		if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
-			return false;
-		}
-
-		return wp_remote_retrieve_body( $response );
-	}
-
-	/**
-	 * Get the parsed site config for a URL
-	 *
-	 * @param  string $url The URL for which to retrieve the site config.
-	 * @return array|false The site config.
-	 */
-	public function get_site_config( $url ) {
-		foreach ( $this->get_site_config_filenames( $url ) as $filename ) {
-			$text = $this->download_site_config( $filename );
-			if ( ! $text ) {
-				continue;
-			}
-			return $this->parse_site_config( $text );
-		}
-		return false;
-	}
-
-	/**
-	 * Prase the site config
-	 *
-	 * @param  string $text The site config text.
-	 * @return array The parsed site config.
-	 */
-	public function parse_site_config( $text ) {
-		$site_config = array();
-		$search      = false;
-		foreach ( explode( PHP_EOL, $text ) as $line ) {
-			if ( false === strpos( $line, ':' ) || '#' === substr( ltrim( $line ), 0, 1 ) ) {
-				continue;
-			}
-
-			list( $key, $value ) = explode( ':', $line, 2 );
-			$key                 = strtolower( trim( $key ) );
-			$value               = trim( $value );
-
-			if ( 'find_string' === $key ) {
-				$search = $value;
-				continue;
-			}
-
-			if ( in_array( $key, array( 'title', 'date', 'body', 'author' ), true ) ) {
-				$site_config[ $key ] = $value;
-				continue;
-			}
-
-			if ( 'replace_string' === $key ) {
-				if ( false === $search ) {
-					continue;
-				}
-
-				if ( ! isset( $site_config['replace'] ) ) {
-					$site_config['replace'] = array();
-				}
-
-				$site_config['replace'][ $search ] = $value;
-				$search                            = false;
-				continue;
-
-			}
-
-			if ( 'http_header(' === substr( $key, 0, 12 ) ) {
-				if ( ! isset( $site_config['http_header'] ) ) {
-					$site_config['http_header'] = array();
-				}
-
-				$site_config['http_header'][ substr( $key, 12, -1 ) ] = $value;
-				continue;
-			}
-
-			if ( in_array( $key, array( 'strip', 'strip_id_or_class' ), true ) ) {
-				if ( ! isset( $site_config[ $key ] ) ) {
-					$site_config[ $key ] = array();
-				}
-
-				$site_config[ $key ][] = $value;
-				continue;
-			}
-		}
-
-		return $site_config;
-	}
-
-	/**
-	 * Get possible site config filenames
-	 *
-	 * @param  string $url The URL for which to get possible site config filenames.
-	 * @return array An array of potential filenames.
-	 */
-	public function get_site_config_filenames( $url ) {
-		$host = parse_url( $url, PHP_URL_HOST );
-		if ( 'www.' === substr( $host, 0, 4 ) ) {
-			$host = substr( $host, 4 );
-		}
-
-		$filenames = array( $host . '.txt' );
-		if ( substr_count( $host, '.' ) > 1 ) {
-			$filenames[] = substr( $host, strpos( $host, '.' ) ) . '.txt';
-		}
-
-		return $filenames;
-	}
-
-	/**
 	 * Download the url from the URL
 	 *
 	 * @param  string $url The URL to download.
@@ -766,22 +644,15 @@ class Friends_Post_Collection {
 				'user-agent' => 'WordPress/' . $wp_version . '; ' . home_url( '/' ) . '; Friends/' . Friends::VERSION,
 			),
 		);
-
-		$site_config = $this->get_site_config( $url );
-		if ( isset( $site_config['http_header'] ) ) {
-			$args['headers'] = array_merge( $args['headers'], $site_config['http_header'] );
-		}
-
 		if ( ! $content ) {
 			$response = wp_safe_remote_get( $url, $args );
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
-				return new WP_Error( 'could-not-download', __( 'Could not download the URL.', 'thinkery' ) );
+				return new WP_Error( 'could-not-download', __( 'Could not download the URL.', 'friends-post-collection' ) );
 			}
 			$content = wp_remote_retrieve_body( $response );
 		}
 
-		$item      = $this->extract_content( $content, $url, $site_config );
-		$item->url = $url;
+		$item      = $this->extract_content( $content, $url );
 		return $item;
 
 	}
@@ -793,121 +664,25 @@ class Friends_Post_Collection {
 	 * @param  array  $site_config The site config.
 	 * @return object The parsed content.
 	 */
-	public function extract_content( $html, $url, $site_config = array() ) {
-		if ( ! $site_config ) {
-			$site_config = array();
-		}
-
-		if ( isset( $site_config['replace'] ) ) {
-			foreach ( $site_config['replace'] as $search => $replace ) {
-				$html = str_replace( $search, $replace, $html );
-			}
-		}
-
+	public function extract_content( $html, $url ) {
 		$item = (object) array(
 			'title'   => false,
 			'content' => false,
+			'url'     => $url,
 		);
 
-		if ( ! class_exists( 'Readability', false ) ) {
-			require_once __DIR__ . '/lib/PressForward-Readability/Readability.php';
-		}
+		$config = new andreskrey\Readability\Configuration();
+		$config->setFixRelativeURLs( true );
+    	$config->setOriginalURL( $url );
+		$readability = new andreskrey\Readability\Readability( $config );
 
-		if ( ! class_exists( 'HTML5_Parser', false ) ) {
-			require_once __DIR__ . '/lib/HTML5/Parser.php';
-		}
-
-		set_error_handler( '__return_null' );
-		$readability = new Readability( '<' . '?xml encoding="utf-8" ?' . '>' . stripslashes( $html ), $url, 'html5lib' );
-		restore_error_handler();
-		$dom = new DOMDocument( '<' . '?xml encoding="utf-8" ?' . '>' . ( $html ) );
-		$xpath = new DOMXpath( $readability->dom );
-		$xpath = new DOMXpath( $readability->dom );
-
-		if ( isset( $site_config['strip_id_or_class'] ) ) {
-			foreach ( $site_config['strip_id_or_class'] as $id_or_class ) {
-				$strip = $xpath->query( '//*[contains(@class, "' . esc_attr( $id_or_class ) . '")]|//*[@id="' . esc_attr( $id_or_class ) . '"]' );
-				$this->remove_node( $strip );
-			}
-		}
-
-		if ( isset( $site_config['strip'] ) ) {
-			foreach ( $site_config['strip'] as $xp ) {
-				$this->remove_node( $xpath->query( $xp ) );
-			}
-		}
-		if ( isset( $site_config['title'] ) ) {
-			$item->title = $xpath->query( $site_config['title'] );
-			if ( $item->title ) {
-				$item->title = $this->get_inner_html( $item->title );
-			}
-		}
-
-		if ( isset( $site_config['author'] ) ) {
-			$item->author = $xpath->query( str_replace( 'h2', 'h1', $site_config['author'] ) );
-			if ( $item->author ) {
-				$item->author = $this->get_inner_html( $item->author );
-			}
-		}
-
-		if ( isset( $site_config['body'] ) ) {
-			$item->content = $xpath->query( $site_config['body'] );
-			if ( $item->content ) {
-				$item->content = $this->get_inner_html( $item->content );
-			}
-		}
-
-		if ( ! $item->author ) {
-			$item->author = $xpath->query( "//article//*[contains(concat(' ',normalize-space(@class),' '),' entry-author ')]" );
-			if ( $item->author ) {
-				$item->author = $item->author[0]->textContent;
-			}
-		}
-
-		if ( ! $item->title || ! $item->content ) {
-			$copied_dom = clone $readability->dom;
-			$result     = $readability->init();
-			if ( $result ) {
-				if ( ! $item->title ) {
-					$item->title = $readability->getTitle()->textContent;
-				}
-				if ( ! $item->content ) {
-					$item->content = $readability->getContent()->innerHTML;
-				}
-			} else {
-				$xpath = new DOMXpath( $copied_dom );
-
-				if ( ! $item->title ) {
-					$item->title = $xpath->query( '(//h1)[1]' );
-					if ( $item->title ) {
-						$item->title = $this->get_inner_html( $item->title );
-					} else {
-						$item->title = $xpath->query( '//title' );
-						if ( $item->title ) {
-							$item->title = $this->get_inner_html( $item->title );
-						}
-					}
-				}
-				if ( ! $item->content ) {
-					$urls      = array( 'url', 'blog', 'body', 'content', 'entry', 'hentry', 'main', 'page', 'post', 'text', 'story' );
-					$item->content = $xpath->query( '(//*[contains(@class, "' . implode( '")]|//*[contains(@class, "', $urls ) . '")]|*[contains(@id, "' . implode( '")]|//*[contains(@id, "', $urls ) . '")])[1]' );
-					if ( $item->content ) {
-						$item->content = $this->get_inner_html( $item->content );
-					} else {
-						$item->title = $xpath->query( '//body' );
-						if ( $item->title ) {
-							$item->title = $this->get_inner_html( $item->title );
-						}
-					}
-				}
-			}
-		}
-
-		if ( ! $item->title ) {
-			$item->title = $xpath->query( '//meta[@property="og:title"]/@content' );
-			if ( $item->title ) {
-				$item->title = $this->get_inner_html( $item->title );
-			}
+		try {
+		    $readability->parse( $html );
+		    $item->title = $readability->getTitle();
+		    $item->content = $readability->getContent();
+		    $item->author = $readability->getAuthor();
+		} catch ( andreskrey\Readability\ParseException $e) {
+			return new WP_Error( 'could-not-extract-content', sprintf( __( 'Error processing HTML: %s', 'friends-post-collection' ), $e->getMessage() ) );
 		}
 
 		return $item;

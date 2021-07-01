@@ -22,6 +22,7 @@ defined( 'ABSPATH' ) || exit;
 define( 'FRIENDS_POST_COLLECTION_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FRIENDS_POST_COLLECTION_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
+require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/class.friends-post-collection.php';
 
 add_filter( 'friends_post_collection', '__return_true' );
