@@ -95,11 +95,11 @@ class Friends_Post_Collection {
 			<?php
 			if ( 'private' === get_post_status() ) {
 				?>
-				<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-publish"><?php _e( 'Make post public', 'friends' ); ?></a></li>
+				<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-publish"><?php _e( 'Show post in the feed', 'friends' ); ?></a></li>
 				<?php
 			} elseif ( 'publish' === get_post_status() ) {
 				?>
-					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-private"><?php _e( 'Make post private', 'friends' ); ?></a></li>
+					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-private"><?php _e( 'Hide post from the feed', 'friends' ); ?></a></li>
 				<?php
 			}
 		}
