@@ -9,7 +9,6 @@ function post_content( url ) {
 	form.setAttribute( 'id', 'body-copy' );
 	form.setAttribute( 'method', 'post' );
 	form.setAttribute( 'action', url );
-	form.setAttribute( 'target', '_blank' );
 	form.setAttribute( 'accept-charset', 'UTF-8' );
 
 	function input( key, value ) {
@@ -43,6 +42,13 @@ function post_content( url ) {
 
 		window.document.body.appendChild( form );
 		form.submit();
+		if ( loader ) {
+			loader.parentNode.removeChild( loader );
+		}
+		if ( form ) {
+			form.parentNode.removeChild( form );
+		}
+
 	} catch ( e ) {
 		window.document.getElementById( 'friends-post-collection-loader' ).textContent = e;
 		location.href = url + '&error=' + escape( e );

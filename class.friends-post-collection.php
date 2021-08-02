@@ -554,11 +554,12 @@ class Friends_Post_Collection {
 			if ( ! intval( $_REQUEST['user'] ) ) {
 				return;
 			}
-			list( $last_url, $last_body ) = explode( $delimiter, get_option( 'friends-post-collection_last_save', $delimiter ) );
+			$saved_body = get_user_option( 'friends-post-collection_last_save', $_REQUEST['user'] );
+			list( $last_url, $last_body ) = explode( $delimiter, $saved_body ? $saved_body : $delimiter );
 			$url = $_REQUEST['collect-post'];
 			$body = false;
 			if ( isset( $_POST['body'] ) ) {
-				$body = $_POST['body'];
+				$body = wp_unslash( $_POST['body'] );
 			} elseif ( $last_url === $url ) {
 				$body = $last_body;
 			}
@@ -569,7 +570,7 @@ class Friends_Post_Collection {
 		}
 
 		if ( $body ) {
-			update_option( 'friends-post-collection_last_save', $_REQUEST['collect-post'] . $delimiter . $body );
+			update_user_option( $_REQUEST['user'], 'friends-post-collection_last_save', $url . $delimiter . $body );
 		}
 
 		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
@@ -611,7 +612,6 @@ class Friends_Post_Collection {
 			$post_data = array(
 				'post_title'    => $title,
 				'post_content'  => $content,
-				'post_date_gmt' => gmdate( 'Y-m-d H:i:s' ),
 				'post_status'   => 'private',
 				'post_author'   => $friend_user->ID,
 				'guid'          => $item->url,
@@ -644,6 +644,7 @@ class Friends_Post_Collection {
 				'user-agent' => 'WordPress/' . $wp_version . '; ' . home_url( '/' ) . '; Friends/' . Friends::VERSION,
 			),
 		);
+
 		if ( ! $content ) {
 			$response = wp_safe_remote_get( $url, $args );
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
@@ -681,6 +682,8 @@ class Friends_Post_Collection {
 		    $item->title = $readability->getTitle();
 		    $item->content = $readability->getContent();
 		    $item->author = $readability->getAuthor();
+
+		    $item->content = str_replace( '&#xD;', '', $item->content );
 		} catch ( andreskrey\Readability\ParseException $e) {
 			return new WP_Error( 'could-not-extract-content', sprintf( __( 'Error processing HTML: %s', 'friends-post-collection' ), $e->getMessage() ) );
 		}
