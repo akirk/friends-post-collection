@@ -16,6 +16,7 @@
  * @author Alex Kirk
  */
 class Friends_Post_Collection {
+	const CPT = 'post_collection';
 	/**
 	 * Whether to cache the retrieved users
 	 *
@@ -44,6 +45,8 @@ class Friends_Post_Collection {
 	 * Register the WordPress hooks
 	 */
 	private function register_hooks() {
+		add_action( 'init', array( $this, 'register_custom_post_type' ) );
+		add_filter( 'friends_frontend_post_types', array( $this, 'friends_frontend_post_types' ) );
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_action( 'user_new_form_tag', array( $this, 'user_new_form_tag' ) );
 		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
@@ -61,6 +64,53 @@ class Friends_Post_Collection {
 		add_action( 'wp_ajax_friends-post-collection-mark-publish', array( $this, 'wp_ajax_mark_publish' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-private', array( $this, 'wp_ajax_mark_private' ) );
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
+	}
+
+	/**
+	 * Registers the custom post type
+	 */
+	public function register_custom_post_type() {
+		$labels = array(
+			'name'               => __( 'Collected Posts', 'friends' ),
+			'singular_name'      => __( 'Collected Post', 'friends' ),
+			'add_new'            => _x( 'Add New', 'collected post', 'friends' ),
+			'add_new_item'       => __( 'Add New Collected Post', 'friends' ),
+			'edit_item'          => __( 'Edit Collected Post', 'friends' ),
+			'new_item'           => __( 'New Collected Post', 'friends' ),
+			'all_items'          => __( 'All Collected Posts', 'friends' ),
+			'view_item'          => __( 'View Collected Post', 'friends' ),
+			'search_items'       => __( 'Search Collected Posts', 'friends' ),
+			'not_found'          => __( 'No Collected Posts found', 'friends' ),
+			'not_found_in_trash' => __( 'No Collected Posts found in the Trash', 'friends' ),
+			'parent_item_colon'  => '',
+			'menu_name'          => __( 'Collected Posts', 'friends' ),
+		);
+
+		$args = array(
+			'labels'              => $labels,
+			'description'         => "A collected post",
+			'publicly_queryable'  => Friends::authenticated_for_posts(),
+			'show_ui'             => true,
+			'show_in_menu'        => apply_filters( 'friends_show_cached_posts', false ),
+			'show_in_nav_menus'   => false,
+			'show_in_admin_bar'   => false,
+			'show_in_rest'        => is_user_logged_in(),
+			'exclude_from_search' => true,
+			'public'              => false,
+			'delete_with_user'    => true,
+			'menu_position'       => 5,
+			'menu_icon'           => 'dashicons-pressthis',
+			'supports'            => array( 'title', 'editor', 'author', 'revisions', 'thumbnail', 'excerpt', 'comments', 'post-formats' ),
+			'taxonomies'          => array( 'post_tag', 'post_format' ),
+			'has_archive'         => true,
+		);
+
+		register_post_type( self::CPT, $args );
+	}
+
+	public function friends_frontend_post_types( $post_types ) {
+		$post_types[] = self::CPT;
+		return $post_types;
 	}
 
 	/**
@@ -223,7 +273,7 @@ class Friends_Post_Collection {
 			'user'  => $user,
 			'posts' => new WP_Query(
 				array(
-					'post_type'   => Friends::CPT,
+					'post_type'   => Friends_Post_Collection::CPT,
 					'post_status' => array( 'publish', 'private' ),
 					'author'      => $user->ID,
 				)
@@ -615,7 +665,7 @@ class Friends_Post_Collection {
 				'post_status'   => 'private',
 				'post_author'   => $friend_user->ID,
 				'guid'          => $item->url,
-				'post_type'     => Friends::CPT,
+				'post_type'     => Friends_Post_Collection::CPT,
 			);
 
 			$post_id = wp_insert_post( $post_data, true );
