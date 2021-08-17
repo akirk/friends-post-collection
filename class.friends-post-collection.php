@@ -61,6 +61,7 @@ class Friends_Post_Collection {
 		add_action( 'friends_override_author_name', array( $this, 'friends_override_author_name' ), 15, 3 );
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
+		add_action( 'friends_post_footer_first', array( $this, 'share_button' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-publish', array( $this, 'wp_ajax_mark_publish' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-private', array( $this, 'wp_ajax_mark_private' ) );
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
@@ -896,6 +897,16 @@ class Friends_Post_Collection {
 			<a class="chip" href="<?php echo esc_attr( get_edit_user_link( $user->ID ) ); ?>"><?php esc_html_e( 'Edit' ); ?></a>
 			<?php
 		}
+	}
+
+	public function share_button() {
+		$this->template_loader()->get_template_part(
+			'frontend/share',
+			null,
+			array(
+				'post-collections' => $this->get_post_collection_users()->get_results(),
+			)
+		);
 	}
 
 	function wp_ajax_mark_private() {
