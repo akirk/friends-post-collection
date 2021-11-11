@@ -90,14 +90,14 @@ class Friends_Post_Collection {
 		$args = array(
 			'labels'              => $labels,
 			'description'         => "A collected post",
-			'publicly_queryable'  => Friends::authenticated_for_posts(),
+			'publicly_queryable'  => true,
 			'show_ui'             => true,
 			'show_in_menu'        => apply_filters( 'friends_show_cached_posts', false ),
 			'show_in_nav_menus'   => false,
 			'show_in_admin_bar'   => false,
-			'show_in_rest'        => is_user_logged_in(),
+			'show_in_rest'        => current_user_can( Friends::REQUIRED_ROLE ),
 			'exclude_from_search' => true,
-			'public'              => false,
+			'public'              => true,
 			'delete_with_user'    => true,
 			'menu_position'       => 5,
 			'menu_icon'           => 'dashicons-pressthis',
@@ -415,11 +415,7 @@ class Friends_Post_Collection {
 		// Only show the menu if installed standalone.
 		$friends_settings_exist = '' !== menu_page_url( 'friends-settings', false );
 		if ( $friends_settings_exist ) {
-			$friend_requests = Friend_User_Query::all_friend_requests();
-			$friend_request_count = $friend_requests->get_total();
-			$unread_badge = $this->friends->admin->get_unread_badge( $friend_request_count );
-
-			$menu_title = __( 'Friends', 'friends' ) . $unread_badge;
+			$menu_title = __( 'Friends', 'friends' ) . $this->friends->admin->get_unread_badge();
 			$page_type = sanitize_title( $menu_title );
 
 			add_submenu_page(
@@ -434,7 +430,7 @@ class Friends_Post_Collection {
 			$menu_title = __( 'Friends Post Collection', 'friends' );
 			$page_type = sanitize_title( $menu_title );
 
-			add_menu_page( 'friends', __( 'Friends Post Collection', 'friends' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3.73 );
+			add_menu_page( 'friends', __( 'Friends Post Collection', 'friends' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3 );
 			add_submenu_page(
 				'friends-settings',
 				__( 'About', 'friends' ),
@@ -607,7 +603,7 @@ class Friends_Post_Collection {
 			}
 			$saved_body = get_user_option( 'friends-post-collection_last_save', $_REQUEST['user'] );
 			list( $last_url, $last_body ) = explode( $delimiter, $saved_body ? $saved_body : $delimiter );
-			$url = $_REQUEST['collect-post'];
+			$url = wp_unslash( $_REQUEST['collect-post'] );
 			$body = false;
 			if ( isset( $_POST['body'] ) ) {
 				$body = wp_unslash( $_POST['body'] );

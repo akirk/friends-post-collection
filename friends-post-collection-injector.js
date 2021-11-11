@@ -22,11 +22,11 @@ function post_content( url ) {
 	try {
 		var bodyCopy = window.document.cloneNode( true );
 		var loader = bodyCopy.getElementById( 'friends-post-collection-loader' );
-		if ( loader ) {
+		if ( loader && loader.parentNode ) {
 			loader.parentNode.removeChild( loader );
 		}
 		var previousCopy = bodyCopy.getElementById( 'body-copy' );
-		if ( previousCopy ) {
+		if ( previousCopy && previousCopy.parentNode ) {
 			previousCopy.parentNode.removeChild( previousCopy );
 		}
 
@@ -42,10 +42,10 @@ function post_content( url ) {
 
 		window.document.body.appendChild( form );
 		form.submit();
-		if ( loader ) {
+		if ( loader && loader.parentNode ) {
 			loader.parentNode.removeChild( loader );
 		}
-		if ( form ) {
+		if ( form && form.parentNode ) {
 			form.parentNode.removeChild( form );
 		}
 
