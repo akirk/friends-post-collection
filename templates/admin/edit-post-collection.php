@@ -19,7 +19,7 @@
 				<td><textarea name="description" id="description" rows="5" cols="30"><?php echo esc_html( $args['user']->description ); ?></textarea></td>
 			</tr>
 			<tr>
-				<th><label><?php esc_html_e( 'Posts' ); ?></label></th>
+				<th><label><?php /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ esc_html_e( 'Posts' ); ?></label></th>
 				<td>
 					<fieldset>
 					<a href="<?php echo esc_url( $args['user']->get_local_friends_page_url() ); ?>">
@@ -32,7 +32,7 @@
 				</td>
 			</tr>
 			<tr>
-				<th><label><?php esc_html_e( 'Syndicate Posts' ); ?></label></th>
+				<th><label><?php esc_html_e( 'Syndicate Posts', 'friends' ); ?></label></th>
 				<td>
 					<fieldset>
 						<input type="checkbox" name="publish_post_collection" value="1" <?php checked( get_user_option( 'friends_publish_post_collection', $args['user']->ID ) ); ?> />
@@ -55,6 +55,6 @@
 	</table>
 	<?php do_action( 'users_edit_post_collection_after_form', $args['user'] ); ?>
 	<p class="submit">
-		<input type="submit" id="submit" class="button button-primary" value="<?php esc_html_e( 'Save Changes' ); ?>">
+		<input type="submit" id="submit" class="button button-primary" value="<?php /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ esc_html_e( 'Save Changes' ); ?>">
 	</p>
 </form>

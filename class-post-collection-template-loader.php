@@ -10,6 +10,8 @@
  * @version   1.3.1
  */
 
+namespace Friends;
+
 /**
  * Template loader.
  *
@@ -18,7 +20,7 @@
  * @package Friends
  * @author  Alex Kirk
  */
-class Friends_Post_Collection_Template_Loader extends Friends_Template_Loader {
+class Post_Collection_Template_Loader extends Template_Loader {
 	/**
 	 * Reference to the root directory path of this plugin.
 	 *

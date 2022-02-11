@@ -12,3 +12,8 @@ Collect posts from around the web and create feeds.
 ## Description
 
 This plugin provides the facilities to store feed items in a separate post type. These can be used to create your own compliation of posts and re-publish them for friends.
+
+## Changelog
+
+### 0.7
+- Update for Friends 2.0

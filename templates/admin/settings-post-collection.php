@@ -10,13 +10,13 @@
 <form method="post">
 	<table class="widefat fixed striped">
 		<thead>
-			<th><?php _e( 'Post Collection Name', 'friends' ); ?></th>
-			<th><?php _e( 'External feed', 'friends' ); ?></th>
-			<th><?php _e( 'Bookmarklet', 'friends' ); ?></th>
+			<th><?php esc_html_e( 'Post Collection Name', 'friends' ); ?></th>
+			<th><?php esc_html_e( 'External feed', 'friends' ); ?></th>
+			<th><?php esc_html_e( 'Bookmarklet', 'friends' ); ?></th>
 		</thead>
 		<?php
 		foreach ( $args['post_collections'] as $user ) :
-			$user = new Friend_User( $user );
+			$user = new Friends\User( $user );
 			$feed_url = trailingslashit( $user->get_local_friends_page_url() . 'feed' );
 			?>
 		<tr>
@@ -28,7 +28,7 @@
 		<a href="<?php echo esc_url( $feed_url ); ?>"><?php echo esc_html( $feed_url ); ?></a>
 				<?php
 	else :
-			echo _e( 'disabled', 'friends' );
+			esc_html_e( 'disabled', 'friends' );
 		endif;
 	?>
 		</td>
@@ -36,8 +36,8 @@
 			<?php
 			echo esc_html(
 				sprintf(
-				// translators: %s is  the name of a Post Collection user.
-					__( 'Save to %s', 'friends-post-collection' ),
+					// translators: %s is the name of a Post Collection user.
+					__( 'Save to %s', 'friends' ),
 					$user->display_name
 				)
 			);
@@ -48,7 +48,7 @@
 	<?php endforeach; ?>
 </table>
 <p class="description">
-	<a href="<?php echo esc_url( self_admin_url( 'admin.php?page=create-post-collection' ) ); ?>"><?php _e( 'Create another user', 'friends' ); ?></a></p>
+	<a href="<?php echo esc_url( self_admin_url( 'admin.php?page=create-post-collection' ) ); ?>"><?php esc_html_e( 'Create another user', 'friends' ); ?></a></p>
 
 </form>
 
@@ -65,4 +65,4 @@ echo wp_kses(
 	)
 );
 ?>
-	</p>
+</p>

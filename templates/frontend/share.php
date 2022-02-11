@@ -1,4 +1,12 @@
-<div class="friends-dropdown">
+<?php
+/**
+ * This template contains the post collection share section.
+ *
+ * @version 1.0
+ * @package Friends_Post_Collection
+ */
+
+?><div class="friends-dropdown">
 	<a class="btn ml-1 friends-dropdown-toggle" tabindex="0">
 		<i class="dashicons dashicons-share"></i> <?php echo esc_html( _x( 'Share', 'button', 'friends' ) ); ?>
 	</a>
@@ -10,15 +18,15 @@
 		}
 		?>
 		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right">
-			  <?php
-				echo esc_html(
-					sprintf(
-					// translators: %s is the name of a post collection.
-						_x( 'Move to %s', 'post-collection', 'friends' ),
-						$user->display_name
-					)
-				);
-				?>
+			<?php
+			echo esc_html(
+				sprintf(
+				// translators: %s is the name of a post collection.
+					_x( 'Move to %s', 'post-collection', 'friends' ),
+					$user->display_name
+				)
+			);
+			?>
 			<i class="form-icon"></i></a>
 		</li>
 		<?php

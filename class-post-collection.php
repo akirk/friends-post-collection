@@ -7,6 +7,8 @@
  * @package Friends_Post_Collection
  */
 
+namespace Friends;
+
 /**
  * This is the class for the downloading and storing posts for the Friends Plugin.
  *
@@ -15,7 +17,7 @@
  * @package Friends_Post_Collection
  * @author Alex Kirk
  */
-class Friends_Post_Collection {
+class Post_Collection {
 	const CPT = 'post_collection';
 	/**
 	 * Whether to cache the retrieved users
@@ -48,7 +50,6 @@ class Friends_Post_Collection {
 		add_action( 'init', array( $this, 'register_custom_post_type' ) );
 		add_filter( 'friends_frontend_post_types', array( $this, 'friends_frontend_post_types' ) );
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
-		add_action( 'user_new_form_tag', array( $this, 'user_new_form_tag' ) );
 		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ), 99999 );
@@ -58,6 +59,7 @@ class Friends_Post_Collection {
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_post_collection_dropdown_items' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
+		add_filter( 'friends_associated_roles', array( $this, 'associate_friend_user_role' ) );
 		add_action( 'friends_override_author_name', array( $this, 'friends_override_author_name' ), 15, 3 );
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
@@ -89,7 +91,7 @@ class Friends_Post_Collection {
 
 		$args = array(
 			'labels'              => $labels,
-			'description'         => "A collected post",
+			'description'         => __( 'A collected post', 'friends' ),
 			'publicly_queryable'  => true,
 			'show_ui'             => true,
 			'show_in_menu'        => apply_filters( 'friends_show_cached_posts', false ),
@@ -115,15 +117,15 @@ class Friends_Post_Collection {
 	}
 
 	/**
-	 * Get the Friends_Template_Loader singleton
+	 * Get the Friends\Template_Loader singleton
 	 *
-	 * @return Friends_Template_Loader A class instance.
+	 * @return Friends\Template_Loader A class instance.
 	 */
 	public static function template_loader() {
 		static $template_loader;
 		if ( ! isset( $template_loader ) ) {
-			require_once __DIR__ . '/class.friends-post-collection-template-loader.php';
-			$template_loader = new Friends_Post_Collection_Template_Loader();
+			require_once __DIR__ . '/class-post-collection-template-loader.php';
+			$template_loader = new Post_Collection_Template_Loader();
 		}
 		return $template_loader;
 	}
@@ -137,20 +139,26 @@ class Friends_Post_Collection {
 
 	public function add_post_collection_dropdown_items() {
 		$divider = '<li class="divider" data-content="' . esc_attr__( 'Post Collection', 'friends' ) . '"></li>';
+		$list_tags = array(
+			'li' => array(
+				'class'        => true,
+				'data-content' => true,
+			),
+		);
 		$user_id = get_the_author_meta( 'ID' );
 		if ( $this->is_post_collection_user( $user_id ) ) {
-			echo $divider;
+			echo wp_kses( $divider, $list_tags );
 			$divider = '';
 			?>
-			<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php _e( 'Edit Post Collection', 'friends' ); ?></a></li>
+			<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php esc_html_e( 'Edit Post Collection', 'friends' ); ?></a></li>
 			<?php
 			if ( 'private' === get_post_status() ) {
 				?>
-				<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-publish"><?php _e( 'Show post in the feed', 'friends' ); ?></a></li>
+				<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-publish"><?php esc_html_e( 'Show post in the feed', 'friends' ); ?></a></li>
 				<?php
 			} elseif ( 'publish' === get_post_status() ) {
 				?>
-					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-private"><?php _e( 'Hide post from the feed', 'friends' ); ?></a></li>
+					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-private"><?php esc_html_e( 'Hide post from the feed', 'friends' ); ?></a></li>
 				<?php
 			}
 		}
@@ -159,19 +167,19 @@ class Friends_Post_Collection {
 			if ( intval( $user_id ) === intval( $user->ID ) ) {
 				continue;
 			}
-			echo $divider;
+			echo wp_kses( $divider, $list_tags );
 			$divider = '';
 			?>
 			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right">
-				  <?php
+				<?php
 					echo esc_html(
 						sprintf(
-						// translators: %s is the name of a post collection.
+							// translators: %s is the name of a post collection.
 							_x( 'Move to %s', 'post-collection', 'friends' ),
 							$user->display_name
 						)
 					);
-					?>
+				?>
 				<i class="form-icon"></i></a>
 			</li>
 			<?php
@@ -180,7 +188,7 @@ class Friends_Post_Collection {
 	}
 
 	public function edit_post_collection_link( $link, $user_id ) {
-		$user = new WP_User( $user_id );
+		$user = new \WP_User( $user_id );
 		if ( is_multisite() && is_super_admin( $user->ID ) ) {
 			return $link;
 		}
@@ -198,7 +206,7 @@ class Friends_Post_Collection {
 		static $cache = array();
 
 		if ( ! isset( $cache[ $user_id ] ) ) {
-			$user = new Friend_User( $user_id );
+			$user = new User( $user_id );
 			$cache[ $user_id ] = $user->has_cap( 'post_collection' );
 		}
 
@@ -210,20 +218,20 @@ class Friends_Post_Collection {
 	 */
 	private function check_edit_post_collection() {
 		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to edit this user.' ) );
+			wp_die( esc_html__( 'Sorry, you are not allowed to edit this user.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
 		if ( ! isset( $_GET['user'] ) || ! is_numeric( $_GET['user'] ) ) {
-			wp_die( esc_html__( 'Invalid user ID.' ) );
+			wp_die( esc_html__( 'Invalid user ID.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
-		$user = new Friend_User( intval( $_GET['user'] ) );
+		$user = new User( intval( $_GET['user'] ) );
 		if ( ! $user || is_wp_error( $user ) ) {
-			wp_die( esc_html__( 'Invalid user ID.' ) );
+			wp_die( esc_html__( 'Invalid user ID.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
 		if ( is_multisite() && is_super_admin( $_GET['user'] ) ) {
-			wp_die( esc_html__( 'Invalid user ID.' ) );
+			wp_die( esc_html__( 'Invalid user ID.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
 		if (
@@ -272,9 +280,9 @@ class Friends_Post_Collection {
 		$user = $this->check_edit_post_collection();
 		$args = array(
 			'user'  => $user,
-			'posts' => new WP_Query(
+			'posts' => new \WP_Query(
 				array(
-					'post_type'   => Friends_Post_Collection::CPT,
+					'post_type'   => self::CPT,
 					'post_status' => array( 'publish', 'private' ),
 					'author'      => $user->ID,
 				)
@@ -303,7 +311,7 @@ class Friends_Post_Collection {
 	 */
 	private function check_create_post_collection() {
 		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to create this user.' ) );
+			wp_die( esc_html__( 'Sorry, you are not allowed to create this user.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
 		$user = (object) array(
@@ -317,7 +325,7 @@ class Friends_Post_Collection {
 		if ( isset( $_POST['user_login'] ) ) {
 			$user->user_login = sanitize_user( $_POST['user_login'] );
 			if ( ! $user->user_login && $user->display_name ) {
-				$user->user_login = Friend_User::sanitize_username( $user->display_name );
+				$user->user_login = User::sanitize_username( $user->display_name );
 			}
 		}
 		return $user;
@@ -327,15 +335,15 @@ class Friends_Post_Collection {
 	 * Process the Friends Create Post Collection page
 	 */
 	public function process_create_post_collection() {
-		$errors = new WP_Error;
+		$errors = new \WP_Error;
 		$user   = $this->check_create_post_collection();
 
 		if ( ! $user->user_login ) {
-			$errors->add( 'user_login', __( '<strong>Error</strong>: This username is invalid because it uses illegal characters. Please enter a valid username.' ) );
+			$errors->add( 'user_login', __( '<strong>Error</strong>: This username is invalid because it uses illegal characters. Please enter a valid username.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		} elseif ( username_exists( $user->user_login ) ) {
-			$errors->add( 'user_login', __( '<strong>Error</strong>: This username is already registered. Please choose another one.' ) );
+			$errors->add( 'user_login', __( '<strong>Error</strong>: This username is already registered. Please choose another one.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		} elseif ( ! $user->display_name ) {
-			$errors->add( 'user_login', __( '<strong>Error</strong>: Please enter a valid display name.' ) );
+			$errors->add( 'user_login', __( '<strong>Error</strong>: Please enter a valid display name.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
 		if ( ! $errors->has_errors() ) {
@@ -362,7 +370,7 @@ class Friends_Post_Collection {
 
 		if ( ! empty( $_POST ) ) {
 			if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'create-post-collection' ) ) {
-				$response = new WP_Error( 'invalid-nonce', __( 'For security reasons, please verify the URL and click next if you want to proceed.', 'friends' ) );
+				$response = new \WP_Error( 'invalid-nonce', __( 'For security reasons, please verify the URL and click next if you want to proceed.', 'friends' ) );
 			} else {
 				$response = $this->process_create_post_collection();
 			}
@@ -456,11 +464,11 @@ class Friends_Post_Collection {
 	/**
 	 * Add actions to the user rows
 	 *
-	 * @param  array   $actions The existing actions.
-	 * @param  WP_User $user    The user in question.
+	 * @param  array    $actions The existing actions.
+	 * @param  \WP_User $user    The user in question.
 	 * @return array The extended actions.
 	 */
-	public function user_row_actions( array $actions, WP_User $user ) {
+	public function user_row_actions( array $actions, \WP_User $user ) {
 		if (
 			! current_user_can( Friends::REQUIRED_ROLE ) ||
 			(
@@ -475,11 +483,11 @@ class Friends_Post_Collection {
 				return $actions;
 			}
 
-			$actions = array_merge( array( 'edit' => '<a href="' . esc_url( self_admin_url( 'admin.php?page=edit-post-collection&user=' . $user->ID ) ) . '">' . __( 'Edit' ) . '</a>' ), $actions );
+			$actions = array_merge( array( 'edit' => '<a href="' . esc_url( self_admin_url( 'admin.php?page=edit-post-collection&user=' . $user->ID ) ) . '">' . __( 'Edit' ) . '</a>' ), $actions ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
-		$friend_user = new Friend_User( $user );
-		$actions['view'] = '<a href="' . esc_url( $friend_user->get_local_friends_page_url() ) . '">' . __( 'View' ) . '</a>';
+		$friend_user = new User( $user );
+		$actions['view'] = '<a href="' . esc_url( $friend_user->get_local_friends_page_url() ) . '">' . __( 'View' ) . '</a>'; // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 
 		unset( $actions['resetpassword'] );
 
@@ -494,9 +502,9 @@ class Friends_Post_Collection {
 	public function about_page( $display_about_friends = false ) {
 		?>
 		<div class="wrap">
-			<h1><?php _e( 'Friends Post Collection', 'friends' ); ?></h1>
+			<h1><?php esc_html_e( 'Friends Post Collection', 'friends' ); ?></h1>
 
-			<p><?php _e( 'The Friends Post Collection plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.', 'friends' ); ?></p>
+			<p><?php esc_html_e( 'The Friends Post Collection plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.', 'friends' ); ?></p>
 
 			<?php
 			$this->template_loader()->get_template_part(
@@ -555,7 +563,7 @@ class Friends_Post_Collection {
 	public function get_post_collection_users() {
 		static $users;
 		if ( ! self::$cache || ! isset( $users ) ) {
-			$users = new WP_User_Query(
+			$users = new \WP_User_Query(
 				array(
 					'role'    => 'post_collection',
 					'order'   => 'ASC',
@@ -624,7 +632,7 @@ class Friends_Post_Collection {
 			auth_redirect();
 		}
 
-		$friend_user = new Friend_User( intval( $_REQUEST['user'] ) );
+		$friend_user = new User( intval( $_REQUEST['user'] ) );
 		if ( ! is_wp_error( $friend_user ) || ! $friend_user->has_cap( 'post_collection' ) ) {
 			$this->save_url( $url, $friend_user, $body );
 		}
@@ -633,13 +641,14 @@ class Friends_Post_Collection {
 	/**
 	 * Download and save the URL content
 	 *
-	 * @param  string      $url The URL to save.
-	 * @param  Friend_User $friend_user  The user.
-	 * @return WP_Error    Potentially an error message.
+	 * @param  string $url The URL to save.
+	 * @param  User   $friend_user  The user.
+	 * @param  string $content      The content.
+	 * @return \WP_Error    Potentially an error message.
 	 */
-	public function save_url( $url, Friend_User $friend_user, $content = null ) {
+	public function save_url( $url, User $friend_user, $content = null ) {
 		if ( ! is_string( $url ) || ! wp_http_validate_url( $url ) ) {
-			return new WP_Error( 'invalid-url', __( 'You entered an invalid URL.', 'friends-post-collection' ) );
+			return new \WP_Error( 'invalid-url', __( 'You entered an invalid URL.', 'friends' ) );
 		}
 
 		$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
@@ -650,19 +659,19 @@ class Friends_Post_Collection {
 			}
 
 			if ( ! $item->content && ! $item->title ) {
-				return new WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends-post-collection' ) );
+				return new \WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends' ) );
 			}
 
 			$title   = strip_tags( trim( $item->title ) );
 			$content = trim( wp_kses_post( $item->content ) );
 
 			$post_data = array(
-				'post_title'    => $title,
-				'post_content'  => $content,
-				'post_status'   => 'private',
-				'post_author'   => $friend_user->ID,
-				'guid'          => $item->url,
-				'post_type'     => Friends_Post_Collection::CPT,
+				'post_title'   => $title,
+				'post_content' => $content,
+				'post_status'  => 'private',
+				'post_author'  => $friend_user->ID,
+				'guid'         => $item->url,
+				'post_type'    => self::CPT,
 			);
 
 			$post_id = wp_insert_post( $post_data, true );
@@ -680,6 +689,7 @@ class Friends_Post_Collection {
 	 * Download the url from the URL
 	 *
 	 * @param  string $url The URL to download.
+	 * @param  string $content      The content.
 	 * @return object An item object.
 	 */
 	public function download( $url, $content = null ) {
@@ -695,12 +705,12 @@ class Friends_Post_Collection {
 		if ( ! $content ) {
 			$response = wp_safe_remote_get( $url, $args );
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
-				return new WP_Error( 'could-not-download', __( 'Could not download the URL.', 'friends-post-collection' ) );
+				return new \WP_Error( 'could-not-download', __( 'Could not download the URL.', 'friends' ) );
 			}
 			$content = wp_remote_retrieve_body( $response );
 		}
 
-		$item      = $this->extract_content( $content, $url );
+		$item = $this->extract_content( $content, $url );
 		return $item;
 
 	}
@@ -709,7 +719,7 @@ class Friends_Post_Collection {
 	 * Extract the content of a URL
 	 *
 	 * @param  string $html        The HTML from which to extract the content.
-	 * @param  array  $site_config The site config.
+	 * @param  array  $url The url.
 	 * @return object The parsed content.
 	 */
 	public function extract_content( $html, $url ) {
@@ -719,20 +729,27 @@ class Friends_Post_Collection {
 			'url'     => $url,
 		);
 
-		$config = new andreskrey\Readability\Configuration();
+		$config = new \andreskrey\Readability\Configuration();
 		$config->setFixRelativeURLs( true );
-    	$config->setOriginalURL( $url );
-		$readability = new andreskrey\Readability\Readability( $config );
+		$config->setOriginalURL( $url );
+		$readability = new \andreskrey\Readability\Readability( $config );
 
 		try {
-		    $readability->parse( $html );
-		    $item->title = $readability->getTitle();
-		    $item->content = $readability->getContent();
-		    $item->author = $readability->getAuthor();
+			$readability->parse( $html );
+			$item->title = $readability->getTitle();
+			$item->content = $readability->getContent();
+			$item->author = $readability->getAuthor();
 
-		    $item->content = str_replace( '&#xD;', '', $item->content );
-		} catch ( andreskrey\Readability\ParseException $e) {
-			return new WP_Error( 'could-not-extract-content', sprintf( __( 'Error processing HTML: %s', 'friends-post-collection' ), $e->getMessage() ) );
+			$item->content = str_replace( '&#xD;', '', $item->content );
+		} catch ( \andreskrey\Readability\ParseException $e ) {
+			return new \WP_Error(
+				'could-not-extract-content',
+				sprintf(
+				// translators: $s is an error message.
+					__( 'Error processing HTML: %s', 'friends' ),
+					$e->getMessage()
+				)
+			);
 		}
 
 		return $item;
@@ -746,7 +763,7 @@ class Friends_Post_Collection {
 	 */
 	private function get_inner_html( $node ) {
 		$html = '';
-		if ( $node instanceof DOMNodeList ) {
+		if ( $node instanceof \DOMNodeList ) {
 			$nodelist = $node;
 		} elseif ( isset( $node->childNodes ) ) { // @codingStandardsIgnoreLine
 			$nodelist = $node->childNodes; // @codingStandardsIgnoreLine
@@ -767,7 +784,7 @@ class Friends_Post_Collection {
 	 * @param  object $node The DOM node or a DOMNodeList to remove.
 	 */
 	private function remove_node( $node ) {
-		if ( $node instanceof DOMNodeList ) {
+		if ( $node instanceof \DOMNodeList ) {
 			$nodelist = $node;
 		} elseif ( isset( $node->childNodes ) ) { // @codingStandardsIgnoreLine
 			$nodelist = $node->childNodes; // @codingStandardsIgnoreLine
@@ -795,12 +812,12 @@ class Friends_Post_Collection {
 	/**
 	 * Overwrite the role name for a post collection user.
 	 *
-	 * @param      string  $name   The name.
-	 * @param      WP_User $user   The user
+	 * @param      string   $name   The name.
+	 * @param      \WP_User $user   The user.
 	 *
 	 * @return     string The potentially modified name.
 	 */
-	public function friend_user_role_name( $name, WP_User $user ) {
+	public function friend_user_role_name( $name, \WP_User $user ) {
 		if ( ! $name && $user->has_cap( 'post_collection' ) ) {
 			$name = _x( 'Post Collection', 'User role', 'friends' );
 		}
@@ -808,6 +825,17 @@ class Friends_Post_Collection {
 		return $name;
 	}
 
+	/**
+	 * Associate the role with the Friends plugin.
+	 *
+	 * @param      array $roles  The roles.
+	 *
+	 * @return     array  The roles with the added Post Collection.
+	 */
+	public function associate_friend_user_role( $roles ) {
+		$roles['post_collection'] = _x( 'Post Collection', 'User role', 'friends' );
+		return $roles;
+	}
 
 	/**
 	 * Potentially override the post author name with metadata.
@@ -823,7 +851,7 @@ class Friends_Post_Collection {
 			return $overridden_author_name;
 		}
 		$post = get_post( $post_id );
-		$author = new WP_User( $post->post_author );
+		$author = new \WP_User( $post->post_author );
 		if ( is_wp_error( $author ) ) {
 			return $author_name;
 		}
@@ -857,7 +885,7 @@ class Friends_Post_Collection {
 	/**
 	 * Amend the Friends List widget
 	 *
-	 * @param object $widget  The widget
+	 * @param object $widget  The widget.
 	 * @param array  $args Sidebar arguments.
 	 */
 	public function friends_widget_friend_list_after( $widget, $args ) {
@@ -867,9 +895,9 @@ class Friends_Post_Collection {
 			<details class="accordion" open>
 				<summary class="accordion-header">
 					<?php
-					echo $args['before_title'];
+					echo wp_kses_post( $args['before_title'] );
 					echo esc_html( _ex( 'Post Collections', 'widget-header', 'friends' ) );
-					echo $args['after_title'];
+					echo wp_kses_post( $args['after_title'] );
 					?>
 				</summary>
 				<ul class="subscriptions-list menu menu-nav accordion-body">
@@ -885,12 +913,12 @@ class Friends_Post_Collection {
 	/**
 	 * Amend the Friends author header.
 	 *
-	 * @param      WP_User $user   The user
+	 * @param      \WP_User $user   The user.
 	 */
 	public function friends_author_header( $user ) {
 		if ( $user->has_cap( 'post_collection' ) ) {
 			?>
-			<a class="chip" href="<?php echo esc_attr( get_edit_user_link( $user->ID ) ); ?>"><?php esc_html_e( 'Edit' ); ?></a>
+			<a class="chip" href="<?php echo esc_attr( get_edit_user_link( $user->ID ) ); ?>"><?php /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ esc_html_e( 'Edit' ); ?></a>
 			<?php
 		}
 	}
@@ -942,11 +970,11 @@ class Friends_Post_Collection {
 			wp_send_json_error( 'error' );
 		}
 
-		$user = new WP_User( $_POST['author'] );
+		$user = new \WP_User( $_POST['author'] );
 		if ( is_wp_error( $user ) ) {
 			wp_send_json_error( 'error' );
 		}
-		if ( ! Friend_User::is_friends_plugin_user( $user ) && ! $user->has_cap( 'post_collection' ) ) {
+		if ( ! User::is_friends_plugin_user( $user ) && ! $user->has_cap( 'post_collection' ) ) {
 			wp_send_json_error( 'error' );
 		}
 
@@ -955,16 +983,16 @@ class Friends_Post_Collection {
 		$post->post_author = $user->ID;
 		wp_update_post( $post );
 
-		$first = new WP_User( $_POST['first'] );
+		$first = new \WP_User( $_POST['first'] );
 		$move_to = sprintf(
-		// translators: %s is the name of a post collection.
+			// translators: %s is the name of a post collection.
 			_x( 'Move to %s', 'post-collection', 'friends' ),
 			$first->display_name
 		);
 
 		wp_send_json_success(
 			array(
-				'new_text'   => intval( $old_author ) !== $first->ID ? __( 'Undo' ) : $move_to,
+				'new_text'   => intval( $old_author ) !== $first->ID ? __( 'Undo' ) : $move_to, // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 				'old_author' => $old_author,
 			)
 		);
@@ -972,8 +1000,35 @@ class Friends_Post_Collection {
 
 	/**
 	 * Actions to take upon plugin activation.
+	 *
+	 * @param      bool $network_wide  Whether the plugin has been activated network-wide.
 	 */
-	public static function activate_plugin() {
+	public static function activate_plugin( $network_wide = null ) {
+		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
+			if ( $network_wide ) {
+				if ( ! is_super_admin() ) {
+					return;
+				}
+				foreach ( get_sites() as $blog ) {
+					switch_to_blog( $blog->blog_id );
+					self::activate_for_blog();
+					restore_current_blog();
+				}
+			} else {
+				if ( ! current_user_can( 'activate_plugins' ) ) {
+					return;
+				}
+				self::activate_for_blog();
+			}
+		} else {
+			self::activate_for_blog();
+		}
+	}
+
+	/**
+	 * Actions to take upon plugin activation.
+	 */
+	public static function activate_for_blog() {
 		$post_collection = get_role( 'post_collection' );
 		if ( ! $post_collection ) {
 			$post_collection = add_role( 'post_collection', 'Post Collection' );
@@ -983,7 +1038,7 @@ class Friends_Post_Collection {
 		$default_user_id = get_option( 'friends-post-collection_default_user' );
 		$default_user = false;
 		if ( $default_user_id ) {
-			$default_user = new WP_User( $default_user_id );
+			$default_user = new \WP_User( $default_user_id );
 			if ( ! $default_user->exists() ) {
 				$default_user = false;
 			}
