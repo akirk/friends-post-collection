@@ -18,7 +18,7 @@
 			<?php
 			echo esc_html(
 				sprintf(
-				// translators: %s is  the name of a Post Collection user.
+				// translators: %s is the name of a Post Collection user.
 					__( 'Save to %s', 'friends' ),
 					$display_name
 				)
