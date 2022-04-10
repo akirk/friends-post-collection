@@ -410,7 +410,7 @@ class Post_Collection {
 	}
 
 	public function enqueue_scripts() {
-		if ( ! class_exists( 'Friends' ) ) {
+		if ( ! class_exists( 'Friends\Friends' ) ) {
 			return;
 		}
 
