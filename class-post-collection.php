@@ -108,6 +108,10 @@ class Post_Collection {
 			'has_archive'         => true,
 		);
 
+		if ( isset( $_GET['search'] ) && is_user_logged_in() ) {
+			$args['show_in_rest'] = true;
+		}
+
 		register_post_type( self::CPT, $args );
 	}
 
@@ -634,7 +638,12 @@ class Post_Collection {
 
 		$friend_user = new User( intval( $_REQUEST['user'] ) );
 		if ( ! is_wp_error( $friend_user ) || ! $friend_user->has_cap( 'post_collection' ) ) {
-			$this->save_url( $url, $friend_user, $body );
+			$error = $this->save_url( $url, $friend_user, $body );
+			if ( is_wp_error( $error ) ) {
+				echo '<pre>';
+				print_r( $error );
+				exit;
+			}
 		}
 	}
 
