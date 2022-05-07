@@ -964,7 +964,7 @@ class Post_Collection {
 
 	public function feed_table_row( $feed, $term_id ) {
 		?>
-		<td><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" size="20" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
+		<td><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
 		<?php
 	}
 
@@ -986,6 +986,7 @@ class Post_Collection {
 			$user_feed->delete_metadata( 'fetch-full-content' );
 		}
 	}
+
 	public function modify_feed_item( $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
 			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
