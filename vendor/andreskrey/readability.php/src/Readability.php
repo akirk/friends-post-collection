@@ -144,9 +144,11 @@ class Readability
 
         // Checking for minimum HTML to work with.
         if (!($root = $this->dom->getElementsByTagName('body')->item(0)) || !$root->firstChild) {
-            $this->logger->emergency('No body tag present or body tag empty');
+            if (!($root = $this->dom->getElementsByTagName('html')->item(0)) || !$root->firstChild) {
+                $this->logger->emergency('No body tag present or body tag empty');
 
-            throw new ParseException('Invalid or incomplete HTML.');
+                throw new ParseException('Invalid or incomplete HTML.');
+            }
         }
 
         $this->getMetadata();
