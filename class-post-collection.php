@@ -64,6 +64,11 @@ class Post_Collection {
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
 		add_action( 'friends_post_footer_first', array( $this, 'share_button' ) );
+		add_action( 'friends_feed_table_header', array( $this, 'feed_table_header' ) );
+		add_action( 'friends_feed_table_row', array( $this, 'feed_table_row' ), 10, 2 );
+		add_action( 'friends_process_feed_item_submit', array( $this, 'feed_item_submit' ), 10, 3 );
+		add_action( 'friends_modify_feed_item', array( $this, 'modify_feed_item' ), 10, 4 );
+		add_action( 'friends_after_register_feed_taxonomy', array( $this, 'after_register_feed_taxonomy' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-publish', array( $this, 'wp_ajax_mark_publish' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-private', array( $this, 'wp_ajax_mark_private' ) );
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
@@ -949,6 +954,57 @@ class Post_Collection {
 				'post-collections' => $this->get_post_collection_users()->get_results(),
 			)
 		);
+	}
+
+	public function feed_table_header() {
+		?>
+		<th><?php esc_html_e( 'Fetch Full Content', 'friends' ); ?></th>
+		<?php
+	}
+
+	public function feed_table_row( $feed, $term_id ) {
+		?>
+		<td><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" size="20" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
+		<?php
+	}
+
+	public function after_register_feed_taxonomy() {
+		register_term_meta(
+			User_Feed::TAXONOMY,
+			'fetch-full-content',
+			array(
+				'type'   => 'boolean',
+				'single' => true,
+			)
+		);
+	}
+
+	public function feed_item_submit( $user_feed, $feed, $term_id ) {
+		if ( isset( $feed['fetch-full-content'] ) ) {
+			$user_feed->update_metadata( 'fetch-full-content', true );
+		} else {
+			$user_feed->delete_metadata( 'fetch-full-content' );
+		}
+	}
+	public function modify_feed_item( $item, $user_feed, $friend_user, $post_id ) {
+		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
+			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
+			if ( ! $already_fetched ) {
+				update_post_meta( $post_id, 'full-content-fetched', true );
+				$fetched_item = $this->download( $item->permalink );
+				if ( is_wp_error( $fetched_item ) ) {
+					return $item;
+				}
+
+				if ( ! $fetched_item->content && ! $fetched_item->title ) {
+					return $item;
+				}
+
+				$item->title   = strip_tags( trim( $fetched_item->title ) );
+				$item->post_content = trim( wp_kses_post( $fetched_item->content ) );
+			}
+		}
+		return $item;
 	}
 
 	function wp_ajax_mark_private() {
