@@ -34,6 +34,13 @@ class Post_Collection {
 	private $friends;
 
 	/**
+	 * Tracks whether how many items were already fetched for a feed.
+	 *
+	 * @var array
+	 */
+	private $fetched_for_feed = array();
+
+	/**
 	 * Constructor
 	 *
 	 * @param Friends $friends A reference to the Friends object.
@@ -66,8 +73,9 @@ class Post_Collection {
 		add_action( 'friends_post_footer_first', array( $this, 'share_button' ) );
 		add_action( 'friends_feed_table_header', array( $this, 'feed_table_header' ) );
 		add_action( 'friends_feed_table_row', array( $this, 'feed_table_row' ), 10, 2 );
-		add_action( 'friends_process_feed_item_submit', array( $this, 'feed_item_submit' ), 10, 3 );
+		add_action( 'friends_process_feed_item_submit', array( $this, 'feed_item_submit' ), 10, 2 );
 		add_action( 'friends_modify_feed_item', array( $this, 'modify_feed_item' ), 10, 4 );
+		add_filter( 'friends_can_update_modified_feed_posts', array( $this, 'can_update_modified_feed_posts' ), 10, 5 );
 		add_action( 'friends_after_register_feed_taxonomy', array( $this, 'after_register_feed_taxonomy' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-publish', array( $this, 'wp_ajax_mark_publish' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-private', array( $this, 'wp_ajax_mark_private' ) );
@@ -979,7 +987,7 @@ class Post_Collection {
 		);
 	}
 
-	public function feed_item_submit( $user_feed, $feed, $term_id ) {
+	public function feed_item_submit( $user_feed, $feed ) {
 		if ( isset( $feed['fetch-full-content'] ) ) {
 			$user_feed->update_metadata( 'fetch-full-content', true );
 		} else {
@@ -989,6 +997,12 @@ class Post_Collection {
 
 	public function modify_feed_item( $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
+			if ( isset( $this->fetched_for_feed[ $user_feed->term_id ] ) ) {
+				// Only fetch a single item per feed per call.
+				return $item;
+			}
+			$this->fetched_for_feed[ $user_feed->term_id ] = 1;
+
 			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
 			if ( ! $already_fetched ) {
 				update_post_meta( $post_id, 'full-content-fetched', true );
@@ -1006,6 +1020,14 @@ class Post_Collection {
 			}
 		}
 		return $item;
+	}
+
+	public function can_update_modified_feed_posts( $can_track, $item, $user_feed, $friend_user, $post_id ) {
+		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
+			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
+			return ! $already_fetched;
+		}
+		return $can_track;
 	}
 
 	function wp_ajax_mark_private() {
@@ -1081,7 +1103,7 @@ class Post_Collection {
 
 		$user = new User( $_POST['author'] );
 		if ( ! $user || is_wp_error( $user ) ) {
-			wp_send_json_error( __( 'User not found.' ) );
+			wp_send_json_error( __( 'That user does not exist.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 			exit;
 		}
 		if ( ! User::is_friends_plugin_user( $user ) ) {
@@ -1101,6 +1123,7 @@ class Post_Collection {
 			wp_send_json_error( new \WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends' ) ) );
 			exit;
 		}
+		update_post_meta( $post->ID, 'full-content-fetched', true );
 
 		$title   = strip_tags( trim( $item->title ) );
 		$content = trim( wp_kses_post( $item->content ) );
