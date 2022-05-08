@@ -694,7 +694,7 @@ class Post_Collection {
 			}
 
 			$title   = strip_tags( trim( $item->title ) );
-			$content = trim( wp_kses_post( $item->content ) );
+			$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
 
 			$post_data = array(
 				'post_title'   => $title,
@@ -1016,7 +1016,7 @@ class Post_Collection {
 				}
 
 				$item->title   = strip_tags( trim( $fetched_item->title ) );
-				$item->post_content = trim( wp_kses_post( $fetched_item->content ) );
+				$item->post_content = force_balance_tags( trim( wp_kses_post( $fetched_item->content ) ) );
 			}
 		}
 		return $item;
@@ -1126,7 +1126,7 @@ class Post_Collection {
 		update_post_meta( $post->ID, 'full-content-fetched', true );
 
 		$title   = strip_tags( trim( $item->title ) );
-		$content = trim( wp_kses_post( $item->content ) );
+		$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
 
 		$post_data = array(
 			'ID'           => $post->ID,
