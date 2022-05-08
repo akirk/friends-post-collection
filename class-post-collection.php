@@ -1022,12 +1022,12 @@ class Post_Collection {
 		return $item;
 	}
 
-	public function can_update_modified_feed_posts( $can_track, $item, $user_feed, $friend_user, $post_id ) {
+	public function can_update_modified_feed_posts( $can_update, $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
 			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
 			return ! $already_fetched;
 		}
-		return $can_track;
+		return $can_update;
 	}
 
 	function wp_ajax_mark_private() {
