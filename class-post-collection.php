@@ -997,15 +997,14 @@ class Post_Collection {
 
 	public function modify_feed_item( $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
-			if ( isset( $this->fetched_for_feed[ $user_feed->term_id ] ) ) {
-				// Only fetch a single item per feed per call.
-				return $item;
-			}
-			$this->fetched_for_feed[ $user_feed->term_id ] = 1;
-
 			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
 			if ( ! $already_fetched ) {
-				update_post_meta( $post_id, 'full-content-fetched', true );
+				if ( isset( $this->fetched_for_feed[ $user_feed->term_id ] ) ) {
+					// Only fetch a single item per feed per call.
+					return $item;
+				}
+				$this->fetched_for_feed[ $user_feed->term_id ] = $post_id;
+
 				$fetched_item = $this->download( $item->permalink );
 				if ( is_wp_error( $fetched_item ) ) {
 					return $item;
@@ -1014,6 +1013,7 @@ class Post_Collection {
 				if ( ! $fetched_item->content && ! $fetched_item->title ) {
 					return $item;
 				}
+				update_post_meta( $post_id, 'full-content-fetched', true );
 
 				$item->title   = strip_tags( trim( $fetched_item->title ) );
 				$item->post_content = force_balance_tags( trim( wp_kses_post( $fetched_item->content ) ) );
@@ -1025,6 +1025,9 @@ class Post_Collection {
 	public function can_update_modified_feed_posts( $can_update, $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
 			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
+			if ( $post_id === $this->fetched_for_feed[ $user_feed->term_id ] ) {
+				return true;
+			}
 			return ! $already_fetched;
 		}
 		return $can_update;
