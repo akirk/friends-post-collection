@@ -1003,7 +1003,12 @@ class Post_Collection {
 
 	public function modify_feed_item( $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
-			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
+			$already_fetched = false;
+
+			if ( $post_id ) {
+				$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
+			}
+
 			if ( ! $already_fetched ) {
 				if ( isset( $this->fetched_for_feed[ $user_feed->get_id() ] ) ) {
 					// Only fetch a single item per feed per call.
@@ -1019,10 +1024,12 @@ class Post_Collection {
 				if ( ! $fetched_item->content && ! $fetched_item->title ) {
 					return $item;
 				}
-				update_post_meta( $post_id, 'full-content-fetched', true );
 
 				$item->title   = strip_tags( trim( $fetched_item->title ) );
 				$item->post_content = force_balance_tags( trim( wp_kses_post( $fetched_item->content ) ) );
+				$item->meta = array(
+					'full-content-fetched' => true,
+				);
 			}
 		}
 		return $item;
@@ -1030,9 +1037,10 @@ class Post_Collection {
 
 	public function can_update_modified_feed_posts( $can_update, $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
-			if ( $post_id === $this->fetched_for_feed[ $user_feed->get_id() ] ) {
+			if ( ! $post_id || $post_id === $this->fetched_for_feed[ $user_feed->get_id() ] ) {
 				return true;
 			}
+
 			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
 			return ! $already_fetched;
 		}
@@ -1132,7 +1140,6 @@ class Post_Collection {
 			wp_send_json_error( new \WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends' ) ) );
 			exit;
 		}
-		update_post_meta( $post->ID, 'full-content-fetched', true );
 
 		$title   = strip_tags( trim( $item->title ) );
 		$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
@@ -1141,6 +1148,9 @@ class Post_Collection {
 			'ID'           => $post->ID,
 			'post_title'   => $title,
 			'post_content' => $content,
+			'meta_input'   => array(
+				'full-content-fetched' => true,
+			),
 		);
 
 		wp_update_post( $post_data );
