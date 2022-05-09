@@ -203,12 +203,18 @@ class Post_Collection {
 			<?php
 		}
 
+		$already_fetched = get_post_meta( get_the_ID(), 'full-content-fetched', true );
+		$i_classes = 'form-icon';
+		if ( $already_fetched ) {
+			$i_classes = 'dashicons dashicons-saved';
+		}
+
 		?>
 		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( get_the_author_ID() ); ?>" class="friends-post-collection-fetch-full-content has-icon-right">
 			<?php
 				esc_html_e( 'Fetch full content', 'friends' );
 			?>
-			<i class="form-icon"></i></a>
+			<i class="<?php echo esc_attr( $i_classes ); ?>"></i></a>
 		</li>
 		<?php
 	}
@@ -999,11 +1005,11 @@ class Post_Collection {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
 			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
 			if ( ! $already_fetched ) {
-				if ( isset( $this->fetched_for_feed[ $user_feed->term_id ] ) ) {
+				if ( isset( $this->fetched_for_feed[ $user_feed->get_id() ] ) ) {
 					// Only fetch a single item per feed per call.
 					return $item;
 				}
-				$this->fetched_for_feed[ $user_feed->term_id ] = $post_id;
+				$this->fetched_for_feed[ $user_feed->get_id() ] = $post_id;
 
 				$fetched_item = $this->download( $item->permalink );
 				if ( is_wp_error( $fetched_item ) ) {
@@ -1024,10 +1030,10 @@ class Post_Collection {
 
 	public function can_update_modified_feed_posts( $can_update, $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
-			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
-			if ( $post_id === $this->fetched_for_feed[ $user_feed->term_id ] ) {
+			if ( $post_id === $this->fetched_for_feed[ $user_feed->get_id() ] ) {
 				return true;
 			}
+			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
 			return ! $already_fetched;
 		}
 		return $can_update;
