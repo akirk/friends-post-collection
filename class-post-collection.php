@@ -1014,7 +1014,12 @@ class Post_Collection {
 					// Only fetch a single item per feed per call.
 					return $item;
 				}
-				$this->fetched_for_feed[ $user_feed->get_id() ] = $post_id;
+				if ( $post_id ) {
+					$this->fetched_for_feed[ $user_feed->get_id() ] = $post_id;
+				} else {
+					// This is a new post, we just want to record that we already downloaded something.
+					$this->fetched_for_feed[ $user_feed->get_id() ] = true;
+				}
 
 				$fetched_item = $this->download( $item->permalink );
 				if ( is_wp_error( $fetched_item ) ) {
@@ -1027,9 +1032,11 @@ class Post_Collection {
 
 				$item->title   = strip_tags( trim( $fetched_item->title ) );
 				$item->post_content = force_balance_tags( trim( wp_kses_post( $fetched_item->content ) ) );
-				$item->meta = array(
-					'full-content-fetched' => true,
-				);
+				$item->_full_content_fetched = true;
+				if ( $post_id ) {
+					// The post meta needs to be set so that even if we cannot update the article with something meaningful, we won't try it over and over.
+					update_post_meta( $post_id, 'full-content-fetched', true );
+				}
 			}
 		}
 		return $item;
@@ -1037,10 +1044,11 @@ class Post_Collection {
 
 	public function can_update_modified_feed_posts( $can_update, $item, $user_feed, $friend_user, $post_id ) {
 		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
-			if ( ! $post_id || $post_id === $this->fetched_for_feed[ $user_feed->get_id() ] ) {
+			if ( ! $post_id || ( isset( $this->fetched_for_feed[ $user_feed->get_id() ] ) && $post_id === $this->fetched_for_feed[ $user_feed->get_id() ] ) ) {
 				return true;
 			}
 
+			// Prevent updates to items after they were already fetched.
 			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
 			return ! $already_fetched;
 		}
