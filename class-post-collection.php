@@ -34,6 +34,13 @@ class Post_Collection {
 	private $friends;
 
 	/**
+	 * Tracks whether how many items were already fetched for a feed.
+	 *
+	 * @var array
+	 */
+	private $fetched_for_feed = array();
+
+	/**
 	 * Constructor
 	 *
 	 * @param Friends $friends A reference to the Friends object.
@@ -56,7 +63,7 @@ class Post_Collection {
 		add_action( 'wp_loaded', array( $this, 'save_url_endpoint' ), 100 );
 		add_filter( 'get_edit_user_link', array( $this, 'edit_post_collection_link' ), 10, 2 );
 		add_action( 'friend_post_edit_link', array( $this, 'allow_post_editing' ), 10, 2 );
-		add_action( 'friends_entry_dropdown_menu', array( $this, 'add_post_collection_dropdown_items' ) );
+		add_action( 'friends_entry_dropdown_menu', array( $this, 'entry_dropdown_menu' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
 		add_filter( 'friends_associated_roles', array( $this, 'associate_friend_user_role' ) );
@@ -64,9 +71,16 @@ class Post_Collection {
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
 		add_action( 'friends_post_footer_first', array( $this, 'share_button' ) );
+		add_action( 'friends_feed_table_header', array( $this, 'feed_table_header' ) );
+		add_action( 'friends_feed_table_row', array( $this, 'feed_table_row' ), 10, 2 );
+		add_action( 'friends_process_feed_item_submit', array( $this, 'feed_item_submit' ), 10, 2 );
+		add_action( 'friends_modify_feed_item', array( $this, 'modify_feed_item' ), 10, 4 );
+		add_filter( 'friends_can_update_modified_feed_posts', array( $this, 'can_update_modified_feed_posts' ), 10, 5 );
+		add_action( 'friends_after_register_feed_taxonomy', array( $this, 'after_register_feed_taxonomy' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-publish', array( $this, 'wp_ajax_mark_publish' ) );
 		add_action( 'wp_ajax_friends-post-collection-mark-private', array( $this, 'wp_ajax_mark_private' ) );
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
+		add_action( 'wp_ajax_friends-post-collection-fetch-full-content', array( $this, 'wp_ajax_fetch_full_content' ) );
 	}
 
 	/**
@@ -141,7 +155,7 @@ class Post_Collection {
 		return $link;
 	}
 
-	public function add_post_collection_dropdown_items() {
+	public function entry_dropdown_menu() {
 		$divider = '<li class="divider" data-content="' . esc_attr__( 'Post Collection', 'friends' ) . '"></li>';
 		$list_tags = array(
 			'li' => array(
@@ -189,6 +203,20 @@ class Post_Collection {
 			<?php
 		}
 
+		$already_fetched = get_post_meta( get_the_ID(), 'full-content-fetched', true );
+		$i_classes = 'form-icon';
+		if ( $already_fetched ) {
+			$i_classes = 'dashicons dashicons-saved';
+		}
+
+		?>
+		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( get_the_author_ID() ); ?>" class="friends-post-collection-fetch-full-content has-icon-right">
+			<?php
+				esc_html_e( 'Fetch full content', 'friends' );
+			?>
+			<i class="<?php echo esc_attr( $i_classes ); ?>"></i></a>
+		</li>
+		<?php
 	}
 
 	public function edit_post_collection_link( $link, $user_id ) {
@@ -672,7 +700,7 @@ class Post_Collection {
 			}
 
 			$title   = strip_tags( trim( $item->title ) );
-			$content = trim( wp_kses_post( $item->content ) );
+			$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
 
 			$post_data = array(
 				'post_title'   => $title,
@@ -942,6 +970,91 @@ class Post_Collection {
 		);
 	}
 
+	public function feed_table_header() {
+		?>
+		<th><?php esc_html_e( 'Fetch Full Content', 'friends' ); ?></th>
+		<?php
+	}
+
+	public function feed_table_row( $feed, $term_id ) {
+		?>
+		<td style="padding-left: 1em"><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
+		<?php
+	}
+
+	public function after_register_feed_taxonomy() {
+		register_term_meta(
+			User_Feed::TAXONOMY,
+			'fetch-full-content',
+			array(
+				'type'   => 'boolean',
+				'single' => true,
+			)
+		);
+	}
+
+	public function feed_item_submit( $user_feed, $feed ) {
+		if ( isset( $feed['fetch-full-content'] ) ) {
+			$user_feed->update_metadata( 'fetch-full-content', true );
+		} else {
+			$user_feed->delete_metadata( 'fetch-full-content' );
+		}
+	}
+
+	public function modify_feed_item( $item, $user_feed, $friend_user, $post_id ) {
+		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
+			$already_fetched = false;
+
+			if ( $post_id ) {
+				$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
+			}
+
+			if ( ! $already_fetched ) {
+				if ( isset( $this->fetched_for_feed[ $user_feed->get_id() ] ) ) {
+					// Only fetch a single item per feed per call.
+					return $item;
+				}
+				if ( $post_id ) {
+					$this->fetched_for_feed[ $user_feed->get_id() ] = $post_id;
+				} else {
+					// This is a new post, we just want to record that we already downloaded something.
+					$this->fetched_for_feed[ $user_feed->get_id() ] = true;
+				}
+
+				$fetched_item = $this->download( $item->permalink );
+				if ( is_wp_error( $fetched_item ) ) {
+					return $item;
+				}
+
+				if ( ! $fetched_item->content && ! $fetched_item->title ) {
+					return $item;
+				}
+
+				$item->title   = strip_tags( trim( $fetched_item->title ) );
+				$item->post_content = force_balance_tags( trim( wp_kses_post( $fetched_item->content ) ) );
+				$item->_full_content_fetched = true;
+				if ( $post_id ) {
+					// The post meta needs to be set so that even if we cannot update the article with something meaningful, we won't try it over and over.
+					update_post_meta( $post_id, 'full-content-fetched', true );
+				}
+			}
+		}
+		return $item;
+	}
+
+	public function can_update_modified_feed_posts( $can_update, $item, $user_feed, $friend_user, $post_id ) {
+		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
+			if ( ! $post_id || ( isset( $this->fetched_for_feed[ $user_feed->get_id() ] ) && $post_id === $this->fetched_for_feed[ $user_feed->get_id() ] ) ) {
+				return true;
+			}
+
+			// Prevent updates to items after they were already fetched.
+			$already_fetched = get_post_meta( $post_id, 'full-content-fetched', true );
+			return ! $already_fetched;
+		}
+		return $can_update;
+	}
+
 	function wp_ajax_mark_private() {
 		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
 			wp_send_json_error( 'error' );
@@ -979,7 +1092,7 @@ class Post_Collection {
 			wp_send_json_error( 'error' );
 		}
 
-		$user = new \WP_User( $_POST['author'] );
+		$user = new User( $_POST['author'] );
 		if ( is_wp_error( $user ) ) {
 			wp_send_json_error( 'error' );
 		}
@@ -992,7 +1105,7 @@ class Post_Collection {
 		$post->post_author = $user->ID;
 		wp_update_post( $post );
 
-		$first = new \WP_User( $_POST['first'] );
+		$first = new User( $_POST['first'] );
 		$move_to = sprintf(
 			// translators: %s is the name of a post collection.
 			_x( 'Move to %s', 'post-collection', 'friends' ),
@@ -1003,6 +1116,57 @@ class Post_Collection {
 			array(
 				'new_text'   => intval( $old_author ) !== $first->ID ? __( 'Undo' ) : $move_to, // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 				'old_author' => $old_author,
+			)
+		);
+	}
+
+	function wp_ajax_fetch_full_content() {
+		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+			wp_send_json_error( __( 'Sorry, you are not allowed to do that' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			exit;
+		}
+
+		$user = new User( $_POST['author'] );
+		if ( ! $user || is_wp_error( $user ) ) {
+			wp_send_json_error( __( 'That user does not exist.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			exit;
+		}
+		if ( ! User::is_friends_plugin_user( $user ) ) {
+			wp_send_json_error( "User doesn't belong to the Friends plugin." );
+			exit;
+		}
+
+		$post = get_post( $_POST['id'] );
+		$url = get_permalink( $post );
+		$item = $this->download( $url );
+		if ( is_wp_error( $item ) ) {
+			wp_send_json_error( $item );
+			exit;
+		}
+
+		if ( ! $item->content && ! $item->title ) {
+			wp_send_json_error( new \WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends' ) ) );
+			exit;
+		}
+
+		$title   = strip_tags( trim( $item->title ) );
+		$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
+
+		$post_data = array(
+			'ID'           => $post->ID,
+			'post_title'   => $title,
+			'post_content' => $content,
+			'meta_input'   => array(
+				'full-content-fetched' => true,
+			),
+		);
+
+		wp_update_post( $post_data );
+
+		wp_send_json_success(
+			array(
+				'post_title'   => $title,
+				'post_content' => $content,
 			)
 		);
 	}
