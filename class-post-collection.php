@@ -457,13 +457,13 @@ class Post_Collection {
 
 	public function admin_menu() {
 		// Only show the menu if installed standalone.
-		$friends_settings_exist = '' !== menu_page_url( 'friends-settings', false );
+		$friends_settings_exist = '' !== menu_page_url( 'friends', false );
 		if ( $friends_settings_exist ) {
 			$menu_title = __( 'Friends', 'friends' ) . $this->friends->admin->get_unread_badge();
 			$page_type = sanitize_title( $menu_title );
 
 			add_submenu_page(
-				'friends-settings',
+				'friends',
 				__( 'Post Collection', 'friends' ),
 				__( 'Post Collection', 'friends' ),
 				'administrator',
@@ -474,25 +474,25 @@ class Post_Collection {
 			$menu_title = __( 'Friends Post Collection', 'friends' );
 			$page_type = sanitize_title( $menu_title );
 
-			add_menu_page( 'friends', __( 'Friends Post Collection', 'friends' ), 'administrator', 'friends-settings', null, 'dashicons-groups', 3 );
+			add_menu_page( 'friends', __( 'Friends Post Collection', 'friends' ), 'administrator', 'friends', null, 'dashicons-groups', 3 );
 			add_submenu_page(
-				'friends-settings',
+				'friends',
 				__( 'About', 'friends' ),
 				__( 'About', 'friends' ),
 				'administrator',
-				'friends-settings',
+				'friends',
 				array( $this, 'about_page_with_friends_about' )
 			);
 
 		}
 
 		if ( isset( $_GET['page'] ) && 0 === strpos( $_GET['page'], 'create-post-collection' ) ) {
-			add_submenu_page( 'friends-settings', __( 'Create Post Collection', 'friends' ), __( 'Create Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'create-post-collection', array( $this, 'render_create_post_collection' ) );
+			add_submenu_page( 'friends', __( 'Create Post Collection', 'friends' ), __( 'Create Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'create-post-collection', array( $this, 'render_create_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_create-post-collection', array( $this, 'process_create_post_collection' ) );
 		}
 
 		if ( isset( $_GET['page'] ) && 0 === strpos( $_GET['page'], 'edit-post-collection' ) ) {
-			add_submenu_page( 'friends-settings', __( 'Edit Post Collection', 'friends' ), __( 'Edit Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
+			add_submenu_page( 'friends', __( 'Edit Post Collection', 'friends' ), __( 'Edit Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_edit-post-collection', array( $this, 'process_edit_post_collection' ) );
 		}
 	}
