@@ -59,6 +59,7 @@ class Post_Collection {
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
+		add_action( 'admin_bar_menu', array( $this, 'admin_bar_new_content' ), 72 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ), 99999 );
 		add_action( 'wp_loaded', array( $this, 'save_url_endpoint' ), 100 );
 		add_filter( 'get_edit_user_link', array( $this, 'edit_post_collection_link' ), 10, 2 );
@@ -308,17 +309,20 @@ class Post_Collection {
 		exit;
 	}
 
-	public function render_edit_post_collection( $user_id ) {
+	public function render_edit_post_collection() {
 		$user = $this->check_edit_post_collection();
 		$args = array(
-			'user'  => $user,
-			'posts' => new \WP_Query(
+			'user'                => $user,
+			'posts'               => new \WP_Query(
 				array(
 					'post_type'   => self::CPT,
 					'post_status' => array( 'publish', 'private' ),
 					'author'      => $user->ID,
 				)
 			),
+			'post_collection_url' => home_url( '/?user=' . $user->ID ),
+			'bookmarklet_js'      => $this->get_bookmarklet_js(),
+
 		);
 
 		?>
@@ -493,6 +497,24 @@ class Post_Collection {
 		}
 	}
 
+
+	/**
+	 * Add a Post Collection entry to the New Content admin section
+	 *
+	 * @param  \WP_Admin_Bar $wp_menu The admin bar to modify.
+	 */
+	public function admin_bar_new_content( \WP_Admin_Bar $wp_menu ) {
+		if ( current_user_can( Friends::REQUIRED_ROLE ) ) {
+			$wp_menu->add_menu(
+				array(
+					'id'     => 'new-post-collection',
+					'parent' => 'new-content',
+					'title'  => esc_html__( 'Post Collection', 'friends' ),
+					'href'   => self_admin_url( 'admin.php?page=create-post-collection' ),
+				)
+			);
+		}
+	}
 	/**
 	 * Add actions to the user rows
 	 *
@@ -1002,7 +1024,7 @@ class Post_Collection {
 	}
 
 	public function modify_feed_item( $item, $user_feed, $friend_user, $post_id ) {
-		if ( $user_feed->get_metadata( 'fetch-full-content' ) ) {
+		if ( $user_feed && $user_feed->get_metadata( 'fetch-full-content' ) ) {
 			$already_fetched = false;
 
 			if ( $post_id ) {

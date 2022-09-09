@@ -50,6 +50,24 @@
 					</fieldset>
 				</td>
 			</tr>
+			<tr>
+				<th><label><?php esc_html_e( 'Bookmarklet', 'friends' ); ?></label></th>
+				<td>
+					<a href="javascript:<?php echo rawurlencode( trim( str_replace( "window.document.getElementById( 'friends-post-collection-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( $args['post_collection_url'] ) . "'", $args['bookmarklet_js'] ), ';' ) ); ?>" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd;text-decoration: none; margin-right: 3em">
+						<?php
+						echo esc_html(
+							sprintf(
+							// translators: %s is the name of a Post Collection user.
+								__( 'Save to %s', 'friends' ),
+								$args['user']->display_name
+							)
+						);
+						?>
+					</a>
+					<p class="description">
+						<?php esc_html_e( 'Save articles from the web to this Post Collection using this bookmarklet. Drag it to your browser bar.', 'friends' ); ?></a></p>
+				</td>
+			</tr>
 			<?php do_action( 'users_edit_post_collection_table_end', $args['user'] ); ?>
 		</tbody>
 	</table>
