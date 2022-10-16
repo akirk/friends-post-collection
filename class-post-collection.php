@@ -486,12 +486,12 @@ class Post_Collection {
 
 		}
 
-		if ( isset( $_GET['page'] ) && 0 === strpos( $_GET['page'], 'create-post-collection' ) ) {
+		if ( isset( $_GET['page'] ) && $_GET['page'] === 'create-post-collection' ) {
 			add_submenu_page( 'friends', __( 'Create Post Collection', 'friends' ), __( 'Create Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'create-post-collection', array( $this, 'render_create_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_create-post-collection', array( $this, 'process_create_post_collection' ) );
 		}
 
-		if ( isset( $_GET['page'] ) && 0 === strpos( $_GET['page'], 'edit-post-collection' ) ) {
+		if ( isset( $_GET['page'] ) && $_GET['page'] === 'edit-post-collection' ) {
 			add_submenu_page( 'friends', __( 'Edit Post Collection', 'friends' ), __( 'Edit Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_edit-post-collection', array( $this, 'process_edit_post_collection' ) );
 		}
@@ -764,7 +764,11 @@ class Post_Collection {
 		if ( ! $content ) {
 			$response = wp_safe_remote_get( $url, $args );
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
-				return new \WP_Error( 'could-not-download', __( 'Could not download the URL.', 'friends' ) );
+				return new \WP_Error( 'could-not-download', __( 'Could not download the URL.', 'friends' ), array(
+					'url' => $url,
+					'http_status' => wp_remote_retrieve_response_code( $response ),
+					'http_body' => wp_remote_retrieve_body( $response ),
+				) );
 			}
 			$content = wp_remote_retrieve_body( $response );
 		}
