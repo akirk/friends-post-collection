@@ -67,7 +67,7 @@ class Post_Collection {
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'entry_dropdown_menu' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
-		add_filter( 'friends_associated_roles', array( $this, 'associate_friend_user_role' ) );
+		add_filter( 'friends_plugin_roles', array( $this, 'associate_friend_user_role' ) );
 		add_action( 'friends_override_author_name', array( $this, 'friends_override_author_name' ), 15, 3 );
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
@@ -896,7 +896,7 @@ class Post_Collection {
 	 * @return     array  The roles with the added Post Collection.
 	 */
 	public function associate_friend_user_role( $roles ) {
-		$roles['post_collection'] = _x( 'Post Collection', 'User role', 'friends' );
+		$roles[] = 'post_collection';
 		return $roles;
 	}
 
