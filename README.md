@@ -15,5 +15,8 @@ This plugin provides the facilities to store feed items in a separate post type.
 
 ## Changelog
 
-### 0.7
+### 1.0
+- Add a feed option to fetch full content: Make use of Readability to get the contents of posts from the original URL (useful for excerpt feeds), either via a dropdown entry for each feed item, or for new entries in incoming feeds (checkbox in the feeds overview).
+
+### 0.8
 - Update for Friends 2.0
