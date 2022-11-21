@@ -211,7 +211,7 @@ class Post_Collection {
 		}
 
 		?>
-		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( get_the_author_ID() ); ?>" class="friends-post-collection-fetch-full-content has-icon-right">
+		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( get_the_author_meta( 'ID' ) ); ?>" class="friends-post-collection-fetch-full-content has-icon-right">
 			<?php
 				esc_html_e( 'Fetch full content', 'friends' );
 			?>
@@ -486,12 +486,12 @@ class Post_Collection {
 
 		}
 
-		if ( isset( $_GET['page'] ) && $_GET['page'] === 'create-post-collection' ) {
+		if ( isset( $_GET['page'] ) && 'create-post-collection' === $_GET['page'] ) {
 			add_submenu_page( 'friends', __( 'Create Post Collection', 'friends' ), __( 'Create Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'create-post-collection', array( $this, 'render_create_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_create-post-collection', array( $this, 'process_create_post_collection' ) );
 		}
 
-		if ( isset( $_GET['page'] ) && $_GET['page'] === 'edit-post-collection' ) {
+		if ( isset( $_GET['page'] ) && 'edit-post-collection' === $_GET['page'] ) {
 			add_submenu_page( 'friends', __( 'Edit Post Collection', 'friends' ), __( 'Edit Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_edit-post-collection', array( $this, 'process_edit_post_collection' ) );
 		}
@@ -764,11 +764,15 @@ class Post_Collection {
 		if ( ! $content ) {
 			$response = wp_safe_remote_get( $url, $args );
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
-				return new \WP_Error( 'could-not-download', __( 'Could not download the URL.', 'friends' ), array(
-					'url' => $url,
-					'http_status' => wp_remote_retrieve_response_code( $response ),
-					'http_body' => wp_remote_retrieve_body( $response ),
-				) );
+				return new \WP_Error(
+					'could-not-download',
+					__( 'Could not download the URL.', 'friends' ),
+					array(
+						'url'         => $url,
+						'http_status' => wp_remote_retrieve_response_code( $response ),
+						'http_body'   => wp_remote_retrieve_body( $response ),
+					)
+				);
 			}
 			$content = wp_remote_retrieve_body( $response );
 		}
@@ -793,6 +797,11 @@ class Post_Collection {
 		);
 
 		$config = new \andreskrey\Readability\Configuration();
+		$logger = null;
+		if ( class_exists( '\\Ozh\\Log\\Logger' ) ) {
+			$logger = new \Ozh\Log\Logger();
+			$config->setLogger( $logger );
+		}
 		$config->setFixRelativeURLs( true );
 		$config->setOriginalURL( $url );
 		$readability = new \andreskrey\Readability\Readability( $config );
@@ -811,7 +820,8 @@ class Post_Collection {
 				// translators: $s is an error message.
 					__( 'Error processing HTML: %s', 'friends' ),
 					$e->getMessage()
-				)
+				),
+				$logger
 			);
 		}
 

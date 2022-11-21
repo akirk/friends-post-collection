@@ -1,5 +1,8 @@
 {
     "require": {
         "andreskrey/readability.php": "^2.1"
+    },
+    "require-dev": {
+        "ozh/log": "^1.0"
     }
 }
