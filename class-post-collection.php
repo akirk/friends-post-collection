@@ -466,7 +466,7 @@ class Post_Collection {
 				'friends',
 				__( 'Post Collection', 'friends' ),
 				__( 'Post Collection', 'friends' ),
-				'administrator',
+				'edit_private_posts',
 				'friends-post-collection',
 				array( $this, 'about_page' )
 			);
@@ -474,12 +474,12 @@ class Post_Collection {
 			$menu_title = __( 'Friends Post Collection', 'friends' );
 			$page_type = sanitize_title( $menu_title );
 
-			add_menu_page( 'friends', __( 'Friends Post Collection', 'friends' ), 'administrator', 'friends', null, 'dashicons-groups', 3 );
+			add_menu_page( 'friends', __( 'Friends Post Collection', 'friends' ), 'edit_private_posts', 'friends', null, 'dashicons-groups', 3 );
 			add_submenu_page(
 				'friends',
 				__( 'About', 'friends' ),
 				__( 'About', 'friends' ),
-				'administrator',
+				'edit_private_posts',
 				'friends',
 				array( $this, 'about_page_with_friends_about' )
 			);
@@ -706,7 +706,7 @@ class Post_Collection {
 	 * @return \WP_Error    Potentially an error message.
 	 */
 	public function save_url( $url, User $friend_user, $content = null ) {
-		if ( ! is_string( $url ) || ! wp_http_validate_url( $url ) ) {
+		if ( ! is_string( $url ) || ! Friends::check_url( $url ) ) {
 			return new \WP_Error( 'invalid-url', __( 'You entered an invalid URL.', 'friends' ) );
 		}
 
