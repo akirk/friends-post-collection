@@ -3,7 +3,7 @@
  * Plugin name: Friends Post Collection
  * Plugin author: Alex Kirk
  * Plugin URI: https://github.com/akirk/friends-post-collection
- * Version: 1.0
+ * Version: 1.1
  * Requires Plugins: friends
  *
  * Description: Collect posts from around the web into your Friends UI.
@@ -35,4 +35,3 @@ add_action(
 );
 
 register_activation_hook( __FILE__, array( 'Friends\Post_Collection', 'activate_plugin' ) );
-
