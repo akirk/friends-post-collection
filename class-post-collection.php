@@ -1210,40 +1210,103 @@ class Post_Collection {
 	/**
 	 * Actions to take upon plugin activation.
 	 *
-	 * @param      bool $network_wide  Whether the plugin has been activated network-wide.
+	 * @param      bool $network_activate  Whether the plugin has been activated network-wide.
 	 */
-	public static function activate_plugin( $network_wide = null ) {
+	public static function activate_plugin( $network_activate = null ) {
 		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
-			if ( $network_wide ) {
+			if ( $network_activate ) {
+				// Only Super Admins can use Network Activate.
 				if ( ! is_super_admin() ) {
 					return;
 				}
+
+				// Activate for each site.
 				foreach ( get_sites() as $blog ) {
 					switch_to_blog( $blog->blog_id );
-					self::activate_for_blog();
+					self::setup();
 					restore_current_blog();
 				}
-			} else {
-				if ( ! current_user_can( 'activate_plugins' ) ) {
-					return;
-				}
-				self::activate_for_blog();
+			} elseif ( current_user_can( 'activate_plugins' ) ) {
+				self::setup();
 			}
-		} else {
-			self::activate_for_blog();
+			return;
 		}
+
+		self::setup();
 	}
 
 	/**
-	 * Actions to take upon plugin activation.
+	 * Make sure that setup actions are executed.
+	 *
+	 * @param      int|WP_Site $blog_id  Blog ID.
 	 */
-	public static function activate_for_blog() {
-		$post_collection = get_role( 'post_collection' );
-		if ( ! $post_collection ) {
-			$post_collection = add_role( 'post_collection', 'Post Collection' );
+	public static function activate_for_blog( $blog_id ) {
+		if ( ! function_exists( 'is_plugin_active_for_network' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
-		$post_collection->add_cap( 'post_collection' );
-		$post_collection->add_cap( 'level_0' );
+
+		if ( $blog_id instanceof \WP_Site ) {
+			$blog_id = (int) $blog_id->blog_id;
+		}
+
+		if ( is_plugin_active_for_network( FRIENDS_PLUGIN_BASENAME ) ) {
+			switch_to_blog( $blog_id );
+			self::setup();
+			restore_current_blog();
+		}
+	}
+
+
+	public static function get_role_capabilities( $role ) {
+		$capabilities = array();
+
+		$capabilities['post_collection'] = array(
+			'post_collection' => true,
+		);
+
+		// All roles belonging to this plugin have the friends_plugin capability.
+		foreach ( array_keys( $capabilities ) as $type ) {
+			$capabilities[ $type ]['friends_plugin'] = true;
+		}
+
+		if ( ! isset( $capabilities[ $role ] ) ) {
+			return array();
+		}
+
+		return $capabilities[ $role ];
+	}
+
+	/**
+	 * Create the user roles
+	 */
+	private static function setup_roles() {
+		$default_roles = array(
+			'post_collection' => _x( 'Post Collection', 'User role', 'friends' ),
+		);
+
+		$roles = new \WP_Roles;
+
+		foreach ( $default_roles as $type => $name ) {
+			$role = false;
+			foreach ( $roles->roles as $slug => $data ) {
+				if ( isset( $data['capabilities'][ $type ] ) ) {
+					$role = get_role( $slug );
+					break;
+				}
+			}
+			if ( ! $role ) {
+				$role = add_role( $type, $name, self::get_role_capabilities( $type ) );
+				continue;
+			}
+
+			// This might update missing capabilities.
+			foreach ( array_keys( self::get_role_capabilities( $type ) ) as $cap ) {
+				$role->add_cap( $cap );
+			}
+		}
+	}
+
+	private static function setup_default_user() {
 		$default_user_id = get_option( 'friends-post-collection_default_user' );
 		$default_user = false;
 		if ( $default_user_id ) {
@@ -1262,5 +1325,14 @@ class Post_Collection {
 			$user_id = wp_insert_user( $userdata );
 			update_option( 'friends-post-collection_default_user', $user_id );
 		}
+	}
+
+	/**
+	 * Actions to take upon plugin activation.
+	 */
+	public static function setup() {
+		self::setup_roles();
+		self::setup_default_user();
+
 	}
 }

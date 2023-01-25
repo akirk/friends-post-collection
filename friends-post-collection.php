@@ -3,7 +3,7 @@
  * Plugin name: Friends Post Collection
  * Plugin author: Alex Kirk
  * Plugin URI: https://github.com/akirk/friends-post-collection
- * Version: 1.1
+ * Version: 1.1.1
  * Requires Plugins: friends
  *
  * Description: Collect posts from around the web into your Friends UI.
@@ -14,6 +14,8 @@
  *
  * @package Friends_Post_Collection
  */
+
+namespace Friends;
 
 /**
  * This file contains the main plugin functionality.
@@ -30,8 +32,10 @@ add_filter( 'friends_post_collection', '__return_true' );
 add_action(
 	'friends_loaded',
 	function( $friends ) {
-		new Friends\Post_Collection( $friends );
+		new Post_Collection( $friends );
 	}
 );
 
-register_activation_hook( __FILE__, array( 'Friends\Post_Collection', 'activate_plugin' ) );
+register_activation_hook( __FILE__, array( __NAMESPACE__ . '\Post_Collection', 'activate_plugin' ) );
+add_action( 'activate_blog', array( __NAMESPACE__ . '\Post_Collection', 'activate_plugin' ) );
+add_action( 'wp_initialize_site', array( __NAMESPACE__ . '\Post_Collection', 'activate_for_blog' ) );
