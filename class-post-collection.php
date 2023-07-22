@@ -64,6 +64,7 @@ class Post_Collection {
 		add_action( 'wp_loaded', array( $this, 'save_url_endpoint' ), 100 );
 		add_filter( 'get_edit_user_link', array( $this, 'edit_post_collection_link' ), 10, 2 );
 		add_action( 'friend_post_edit_link', array( $this, 'allow_post_editing' ), 10, 2 );
+		add_action( 'friends_show_author_header_edit', array( $this, 'friends_show_author_header_edit' ), 10, 2 );
 		add_action( 'friends_entry_dropdown_menu', array( $this, 'entry_dropdown_menu' ) );
 		add_action( 'friends_friend_feed_viewable', array( $this, 'friends_friend_feed_viewable' ), 10, 2 );
 		add_action( 'friend_user_role_name', array( $this, 'friend_user_role_name' ), 10, 2 );
@@ -154,6 +155,13 @@ class Post_Collection {
 			return $original;
 		}
 		return $link;
+	}
+
+	public function friends_show_author_header_edit( $show, $friend_user ) {
+		if ( $friend_user->has_cap( 'post_collection' ) ) {
+			return false;
+		}
+		return $show;
 	}
 
 	public function entry_dropdown_menu() {
@@ -617,7 +625,7 @@ class Post_Collection {
 	public function get_post_collection_users() {
 		static $users;
 		if ( ! self::$cache || ! isset( $users ) ) {
-			$users = new \WP_User_Query(
+			$users = new User_Query(
 				array(
 					'role'    => 'post_collection',
 					'order'   => 'ASC',
@@ -1013,6 +1021,9 @@ class Post_Collection {
 	}
 
 	public function feed_table_row( $feed, $term_id ) {
+		if ( ! $feed ) {
+			return;
+		}
 		?>
 		<td style="padding-left: 1em"><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
 		<?php
