@@ -27,10 +27,4 @@
 		</a>
 		<?php endforeach; ?>
 	</p>
-	<h3><?php esc_html_e( 'Browser Extension', 'friends' ); ?></h3>
-
-	<p><?php esc_html_e( 'The Friends browser extension also allows to save the currently viewed article.', 'friends' ); ?></p>
-	<p>
-		<a href="https://addons.mozilla.org/en-US/firefox/addon/wpfriends/"><?php echo esc_html_e( 'Firefox Extension', 'friends' ); ?></a>
-	</p>
 </div>
