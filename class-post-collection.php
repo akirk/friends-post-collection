@@ -1317,8 +1317,8 @@ class Post_Collection {
 		}
 		if ( ! $default_user ) {
 			$userdata  = array(
-				'user_login'   => 'saved-posts',
-				'display_name' => 'Saved Posts',
+				'user_login'   => sanitize_user( sanitize_title_with_dashes( __( 'Collected Posts', 'friends' ) ) ),
+				'display_name' => __( 'Collected Posts', 'friends' ),
 				'user_pass'    => wp_generate_password( 256 ),
 				'role'         => 'post_collection',
 			);
