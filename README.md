@@ -4,7 +4,7 @@ Collect posts from around the web and create feeds.
 
 **Contributors:** akirk
 **Requires at least:** 5.0
-**Tested up to:** 6.1
+**Tested up to:** 6.3
 **Requires PHP:** 5.2.4
 **License:** [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
 **Stable tag:** trunk
