@@ -64,5 +64,29 @@ jQuery( function( $ ) {
 			}
 		} );
 		return false;
+	} );	$document.on( 'click', 'a.friends-post-collection-download-images', function() {
+		var $this = $(this);
+		var search_indicator = $this.find( 'i' );
+		if ( search_indicator.hasClass( 'loading' ) ) {
+			return;
+		}
+		wp.ajax.send( 'friends-post-collection-download-images', {
+			data: {
+				id: $this.data( 'id' ),
+				author: $this.data( 'author' )
+			},
+			beforeSend: function() {
+				search_indicator.addClass( 'form-icon loading' );
+			},
+			success: function( response ) {
+				search_indicator.removeClass( 'form-icon loading' ).addClass( 'dashicons dashicons-saved' );
+				$this.closest( 'article' ).find( 'h4.card-title a' ).text( response.post_title );
+				$this.closest( 'article' ).find( 'div.card-body' ).html( response.post_content );
+			},
+			error: function( e ) {
+				search_indicator.removeClass( 'form-icon loading' ).addClass( 'dashicons dashicons-warning' ).prop( 'title', e );
+			}
+		} );
+		return false;
 	} );
 } );
