@@ -1302,51 +1302,36 @@ class Post_Collection {
 			// download the url to a temp file
 			$tmp_file = download_url( $src );
 
-			$file = array(
-				'name'     => $filename,
-				'type'     => wp_check_filetype( $tmp_file ),
-				'tmp_name' => $tmp_file,
-				'error'    => 0,
-				'size'     => filesize( $tmp_file ),
+			// now put that file into the media library
+			$attachment_id = media_handle_sideload(
+				array(
+					'name'     => $filename,
+					'tmp_name' => $tmp_file,
+				),
+				$post->ID
 			);
 
-			$overrides = array(
-				'test_form' => false,
-				'test_type' => false,
-			);
+			// delete the temp file
+			unlink( $tmp_file );
 
-			include_once ABSPATH . 'wp-admin/includes/file.php';
-			$result = wp_handle_sideload( $file, $overrides );
-			if ( ! empty( $result['error'] ) ) {
+			if ( is_wp_error( $attachment_id ) ) {
 				continue;
 			}
 
-			$attachment = array(
-				'post_mime_type' => $result['type'],
-				'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $result['file'] ) ),
-				'post_content'   => '',
-				'post_status'    => 'inherit',
-			);
+			$new_src = wp_get_attachment_url( $attachment_id );
+			$img->setAttribute( 'src', $new_src );
 
-			$attach_id = wp_insert_attachment( $attachment, $result['file'], $post->ID );
-			if ( ! is_wp_error( $attach_id ) ) {
-				require_once ABSPATH . 'wp-admin/includes/image.php';
-				$attach_data = wp_generate_attachment_metadata( $attach_id, $result['file'] );
-				wp_update_attachment_metadata( $attach_id, $attach_data );
-				$new_src = wp_get_attachment_url( $attach_id );
-				$img->setAttribute( 'src', $new_src );
-
-				if ( $img->hasAttribute( 'srcset' ) ) {
-					$old_srcset = $img->getAttribute( 'srcset' );
-					$new_srcset = str_replace( $old_src, $new_src, $old_srcset );
-					$img->setAttribute( 'srcset', $new_srcset );
-				}
+			if ( $img->hasAttribute( 'srcset' ) ) {
+				$old_srcset = $img->getAttribute( 'srcset' );
+				$new_srcset = str_replace( $src, $new_src, $old_srcset );
+				$img->setAttribute( 'srcset', $new_srcset );
 			}
+
 		}
 
 		$post_data = array(
 			'ID'           => $post->ID,
-			'post_content' => wp_kses_post( $dom->saveXML( $dom->documentElement ) ),
+			'post_content' => force_balance_tags( wp_kses_post( $dom->saveXML( $dom->documentElement ) ) ),
 			'meta_input'   => array(
 				'images-downloaded' => true,
 			),
