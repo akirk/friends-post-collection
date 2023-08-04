@@ -83,6 +83,7 @@ class Post_Collection {
 		add_action( 'wp_ajax_friends-post-collection-mark-private', array( $this, 'wp_ajax_mark_private' ) );
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
 		add_action( 'wp_ajax_friends-post-collection-fetch-full-content', array( $this, 'wp_ajax_fetch_full_content' ) );
+		add_action( 'wp_ajax_friends-post-collection-download-images', array( $this, 'wp_ajax_download_images' ) );
 	}
 
 	/**
@@ -202,23 +203,23 @@ class Post_Collection {
 			?>
 			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ? ' copy-mode' : '' ); ?>">
 				<?php
-					if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
-						echo esc_html(
-							sprintf(
-								// translators: %s is the name of a post collection.
-								_x( 'Copy to %s', 'post-collection', 'friends' ),
-								$user->display_name
-							)
-						);
-					} else {
-						echo esc_html(
-							sprintf(
-								// translators: %s is the name of a post collection.
-								_x( 'Move to %s', 'post-collection', 'friends' ),
-								$user->display_name
-							)
-						);
-					}
+				if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
+					echo esc_html(
+						sprintf(
+							// translators: %s is the name of a post collection.
+							_x( 'Copy to %s', 'post-collection', 'friends' ),
+							$user->display_name
+						)
+					);
+				} else {
+					echo esc_html(
+						sprintf(
+							// translators: %s is the name of a post collection.
+							_x( 'Move to %s', 'post-collection', 'friends' ),
+							$user->display_name
+						)
+					);
+				}
 				?>
 				<i class="form-icon"></i></a>
 			</li>
@@ -231,10 +232,22 @@ class Post_Collection {
 			$i_classes = 'dashicons dashicons-saved';
 		}
 
+		$already_downloaded = get_post_meta( get_the_ID(), 'images-downloaded', true );
+		$i_classes = 'form-icon';
+		if ( $already_downloaded ) {
+			$i_classes = 'dashicons dashicons-saved';
+		}
+
 		?>
 		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( get_the_author_meta( 'ID' ) ); ?>" class="friends-post-collection-fetch-full-content has-icon-right">
 			<?php
 				esc_html_e( 'Fetch full content', 'friends' );
+			?>
+			<i class="<?php echo esc_attr( $i_classes ); ?>"></i></a>
+		</li>
+		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( get_the_author_meta( 'ID' ) ); ?>" class="friends-post-collection-download-images has-icon-right">
+			<?php
+				esc_html_e( 'Download external images', 'friends' );
 			?>
 			<i class="<?php echo esc_attr( $i_classes ); ?>"></i></a>
 		</li>
@@ -319,7 +332,7 @@ class Post_Collection {
 				delete_user_option( $user->ID, 'friends_publish_post_collection' );
 			}
 			if ( isset( $_POST['dropdown'] ) ) {
-				switch( $_POST['dropdown'] ) {
+				switch ( $_POST['dropdown'] ) {
 					case 'inactive':
 						update_user_option( $user->ID, 'friends_post_collection_inactive', true );
 						break;
@@ -349,8 +362,8 @@ class Post_Collection {
 		$user = $this->check_edit_post_collection();
 		$args = array(
 			'user'                => $user,
-			'inactive'              => get_user_option( 'friends_post_collection_inactive', $user->ID ),
-			'copy_mode'              => get_user_option( 'friends_post_collection_copy_mode', $user->ID ),
+			'inactive'            => get_user_option( 'friends_post_collection_inactive', $user->ID ),
+			'copy_mode'           => get_user_option( 'friends_post_collection_copy_mode', $user->ID ),
 			'posts'               => new \WP_Query(
 				array(
 					'post_type'   => self::CPT,
@@ -1257,6 +1270,100 @@ class Post_Collection {
 			array(
 				'post_title'   => $title,
 				'post_content' => $content,
+			)
+		);
+	}
+
+	function wp_ajax_download_images() {
+		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+			wp_send_json_error( __( 'Sorry, you are not allowed to do that' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			exit;
+		}
+		$post = get_post( $_POST['id'] );
+		if ( ! $post ) {
+			wp_send_json_error( __( 'That post does not exist.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			exit;
+		}
+
+		$user = User::get_post_author( $post );
+		if ( ! $user || is_wp_error( $user ) ) {
+			wp_send_json_error( __( 'That user does not exist.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			exit;
+		}
+
+		$dom = new \DOMDocument();
+		$dom->loadHTML( $post->post_content );
+
+		foreach ( $dom->getElementsByTagName( 'img' ) as $img ) {
+			$src = $img->getAttribute( 'src' );
+			$p = wp_parse_url( $src );
+			$filename = basename( $p['path'] );
+
+			// download the url to a temp file
+			$tmp_file = download_url( $src );
+
+			$file = array(
+				'name'     => $filename,
+				'type'     => wp_check_filetype( $tmp_file ),
+				'tmp_name' => $tmp_file,
+				'error'    => 0,
+				'size'     => filesize( $tmp_file ),
+			);
+
+			$overrides = array(
+				'test_form' => false,
+				'test_type' => false,
+			);
+
+			include_once ABSPATH . 'wp-admin/includes/file.php';
+			$result = wp_handle_sideload( $file, $overrides );
+			if ( ! empty( $result['error'] ) ) {
+				continue;
+			}
+
+			$attachment = array(
+				'post_mime_type' => $result['type'],
+				'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $result['file'] ) ),
+				'post_content'   => '',
+				'post_status'    => 'inherit',
+			);
+
+			$attach_id = wp_insert_attachment( $attachment, $result['file'], $post->ID );
+			if ( ! is_wp_error( $attach_id ) ) {
+				require_once ABSPATH . 'wp-admin/includes/image.php';
+				$attach_data = wp_generate_attachment_metadata( $attach_id, $result['file'] );
+				wp_update_attachment_metadata( $attach_id, $attach_data );
+				$new_src = wp_get_attachment_url( $attach_id );
+				$img->setAttribute( 'src', $new_src );
+
+				if ( $img->hasAttribute( 'srcset' ) ) {
+					$old_srcset = $img->getAttribute( 'srcset' );
+					$new_srcset = str_replace( $old_src, $new_src, $old_srcset );
+					$img->setAttribute( 'srcset', $new_srcset );
+				}
+			}
+		}
+
+		$post_data = array(
+			'ID'           => $post->ID,
+			'post_content' => $dom->saveHTML(),
+			'meta_input'   => array(
+				'images-downloaded' => true,
+			),
+		);
+		$updated_post = wp_update_post( $post_data );
+
+		if ( is_wp_error( $updated_post ) ) {
+			wp_send_json_error( $updated_post );
+			exit;
+		}
+
+		wp_update_post( $post_data );
+
+		wp_send_json_success(
+			array(
+				'post_title'   => $post->post_title,
+				'post_content' => $post_data['post_content'],
 			)
 		);
 	}
