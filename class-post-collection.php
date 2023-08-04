@@ -1346,7 +1346,7 @@ class Post_Collection {
 
 		$post_data = array(
 			'ID'           => $post->ID,
-			'post_content' => $dom->saveHTML(),
+			'post_content' => wp_kses_post( $dom->saveXML( $dom->documentElement ) ),
 			'meta_input'   => array(
 				'images-downloaded' => true,
 			),
