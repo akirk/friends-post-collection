@@ -11,16 +11,40 @@
 	<table class="form-table">
 		<tbody>
 			<tr>
-				<th><label for="display_name"><?php esc_html_e( 'Active', 'friends' ); ?></label></th>
-				<td><input type="checkbox" name="post_collection_active" id="active" value="1" <?php checked( $args['active'] ); ?> /></td>
-			</tr>
-			<tr>
 				<th><label for="display_name"><?php esc_html_e( 'Display Name', 'friends' ); ?></label></th>
 				<td><input type="text" name="display_name" id="display_name" value="<?php echo esc_attr( $args['user']->display_name ); ?>" class="regular-text" /></td>
 			</tr>
 			<tr>
 				<th><label for="description"><?php esc_html_e( 'Description', 'friends' ); ?></label></th>
 				<td><textarea name="description" id="description" rows="5" cols="30"><?php echo esc_html( $args['user']->description ); ?></textarea></td>
+			</tr>
+			<tr>
+				<th><label for="dropdown"><?php esc_html_e( 'Display in Dropdown', 'friends' ); ?></label></th>
+				<td><select name="dropdown">
+					<option value="inactive"<?php selected( $args['inactive'] ); ?>><?php esc_html_e( 'Hide', 'friends' ); ?></option>
+					<option value="move"<?php selected( ! $args['inactive'] && ! $args['copy_mode'] ); ?>>
+						<?php
+							echo esc_html(
+								sprintf(
+									// translators: %s is the name of a post collection.
+									_x( 'Move to %s', 'post-collection', 'friends' ),
+									$args['user']->display_name
+								)
+							);
+						?>
+					</option>
+					<option value="copy"<?php selected( ! $args['inactive'] && $args['copy_mode'] ); ?>>
+						<?php
+							echo esc_html(
+								sprintf(
+									// translators: %s is the name of a post collection.
+									_x( 'Copy to %s', 'post-collection', 'friends' ),
+									$args['user']->display_name
+								)
+							);
+						?>
+					</option>
+				</select>
 			</tr>
 			<tr>
 				<th><label><?php /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ esc_html_e( 'Posts' ); ?></label></th>

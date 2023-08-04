@@ -200,15 +200,25 @@ class Post_Collection {
 			echo wp_kses( $divider, $list_tags );
 			$divider = '';
 			?>
-			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right">
+			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ? ' copy-mode' : '' ); ?>">
 				<?php
-					echo esc_html(
-						sprintf(
-							// translators: %s is the name of a post collection.
-							_x( 'Move to %s', 'post-collection', 'friends' ),
-							$user->display_name
-						)
-					);
+					if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
+						echo esc_html(
+							sprintf(
+								// translators: %s is the name of a post collection.
+								_x( 'Copy to %s', 'post-collection', 'friends' ),
+								$user->display_name
+							)
+						);
+					} else {
+						echo esc_html(
+							sprintf(
+								// translators: %s is the name of a post collection.
+								_x( 'Move to %s', 'post-collection', 'friends' ),
+								$user->display_name
+							)
+						);
+					}
 				?>
 				<i class="form-icon"></i></a>
 			</li>
@@ -308,10 +318,20 @@ class Post_Collection {
 			} else {
 				delete_user_option( $user->ID, 'friends_publish_post_collection' );
 			}
-			if ( isset( $_POST['post_collection_active'] ) && $_POST['post_collection_active'] ) {
-				delete_user_option( $user->ID, 'friends_post_collection_inactive' );
-			} else {
-				update_user_option( $user->ID, 'friends_post_collection_inactive', true );
+			if ( isset( $_POST['dropdown'] ) ) {
+				switch( $_POST['dropdown'] ) {
+					case 'inactive':
+						update_user_option( $user->ID, 'friends_post_collection_inactive', true );
+						break;
+					case 'move':
+						delete_user_option( $user->ID, 'friends_post_collection_inactive' );
+						delete_user_option( $user->ID, 'friends_post_collection_copy_mode' );
+						break;
+					case 'copy':
+						delete_user_option( $user->ID, 'friends_post_collection_inactive' );
+						update_user_option( $user->ID, 'friends_post_collection_copy_mode', true );
+						break;
+				}
 			}
 		} else {
 			return;
@@ -329,7 +349,8 @@ class Post_Collection {
 		$user = $this->check_edit_post_collection();
 		$args = array(
 			'user'                => $user,
-			'active'              => ! get_user_option( 'friends_post_collection_inactive', $user->ID ),
+			'inactive'              => get_user_option( 'friends_post_collection_inactive', $user->ID ),
+			'copy_mode'              => get_user_option( 'friends_post_collection_copy_mode', $user->ID ),
 			'posts'               => new \WP_Query(
 				array(
 					'post_type'   => self::CPT,
@@ -1156,21 +1177,34 @@ class Post_Collection {
 			wp_send_json_error( 'error' );
 		}
 
+		$first = new User( $_POST['first'] );
+		$new_text = __( 'Undo' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+
 		$post = get_post( $_POST['id'] );
 		$old_author = $post->post_author;
 		$post->post_author = $user->ID;
-		wp_update_post( $post );
-
-		$first = new User( $_POST['first'] );
-		$move_to = sprintf(
-			// translators: %s is the name of a post collection.
-			_x( 'Move to %s', 'post-collection', 'friends' ),
-			$first->display_name
-		);
+		if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
+			unset( $post->ID );
+			wp_insert_post( $post );
+			$new_text = sprintf(
+				// translators: %s is the name of a post collection.
+				__( 'Copied to %s!', 'post-collection', 'friends' ),
+				$user->display_name
+			);
+		} else {
+			wp_update_post( $post );
+			if ( intval( $old_author ) !== $first->ID ) {
+				$new_text = sprintf(
+					// translators: %s is the name of a post collection.
+					_x( 'Move to %s', 'post-collection', 'friends' ),
+					$first->display_name
+				);
+			}
+		}
 
 		wp_send_json_success(
 			array(
-				'new_text'   => intval( $old_author ) !== $first->ID ? __( 'Undo' ) : $move_to, // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+				'new_text'   => $new_text,
 				'old_author' => $old_author,
 			)
 		);
@@ -1181,18 +1215,18 @@ class Post_Collection {
 			wp_send_json_error( __( 'Sorry, you are not allowed to do that' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 			exit;
 		}
+		$post = get_post( $_POST['id'] );
+		if ( ! $post ) {
+			wp_send_json_error( __( 'That post does not exist.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			exit;
+		}
 
-		$user = new User( $_POST['author'] );
+		$user = User::get_post_author( $post );
 		if ( ! $user || is_wp_error( $user ) ) {
 			wp_send_json_error( __( 'That user does not exist.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 			exit;
 		}
-		if ( ! User::is_friends_plugin_user( $user ) ) {
-			wp_send_json_error( "User doesn't belong to the Friends plugin." );
-			exit;
-		}
 
-		$post = get_post( $_POST['id'] );
 		$url = get_permalink( $post );
 		$item = $this->download( $url );
 		if ( is_wp_error( $item ) ) {
