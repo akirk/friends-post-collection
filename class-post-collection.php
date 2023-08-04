@@ -1185,14 +1185,14 @@ class Post_Collection {
 		$post->post_author = $user->ID;
 		if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
 			unset( $post->ID );
-			wp_insert_post( $post );
+			$user->insert_post( (array) $post );
 			$new_text = sprintf(
 				// translators: %s is the name of a post collection.
 				__( 'Copied to %s!', 'post-collection', 'friends' ),
 				$user->display_name
 			);
 		} else {
-			wp_update_post( $post );
+			$user->insert_post( (array) $post );
 			if ( intval( $old_author ) !== $first->ID ) {
 				$new_text = sprintf(
 					// translators: %s is the name of a post collection.

@@ -21,6 +21,7 @@
 			$feed_url = trailingslashit( $user->get_local_friends_page_url() . 'feed' );
 			?>
 		<tr>
+		<td><a href="<?php echo esc_url( get_edit_user_link( $user->ID ) ); ?>"><?php echo esc_html( $user->display_name ); ?></a></td>
 		<td><?php
 		if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
 			echo __( 'Hide', 'friends' );
@@ -31,7 +32,6 @@
 		}
 		?>
 		</td>
-		<td><a href="<?php echo esc_url( get_edit_user_link( $user->ID ) ); ?>"><?php echo esc_html( $user->display_name ); ?></a></td>
 		<td>
 			<?php
 			if ( get_user_option( 'friends_publish_post_collection', $user->ID ) ) :
