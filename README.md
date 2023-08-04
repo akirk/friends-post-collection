@@ -15,6 +15,11 @@ This plugin provides the facilities to store feed items in a separate post type.
 
 ## Changelog
 
+### 1.2.0
+- Add ability to activate and deactivate Post Collections by ([#3])
+- Add the ability to copy a post ([#4])
+- Add the ability to download external images to the media library ([#5])
+
 ### 1.1
 - Reduce required priviledges, see https://github.com/akirk/friends/pull/121.
 
@@ -23,3 +28,8 @@ This plugin provides the facilities to store feed items in a separate post type.
 
 ### 0.8
 - Update for Friends 2.0
+
+[#5]: https://github.com/akirk/friends-post-collection/pull/5
+[#4]: https://github.com/akirk/friends-post-collection/pull/4
+[#3]: https://github.com/akirk/friends-post-collection/pull/3
+
