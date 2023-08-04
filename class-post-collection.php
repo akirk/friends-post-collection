@@ -194,6 +194,9 @@ class Post_Collection {
 			if ( intval( $user_id ) === intval( $user->ID ) ) {
 				continue;
 			}
+			if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
+				continue;
+			}
 			echo wp_kses( $divider, $list_tags );
 			$divider = '';
 			?>
@@ -305,6 +308,11 @@ class Post_Collection {
 			} else {
 				delete_user_option( $user->ID, 'friends_publish_post_collection' );
 			}
+			if ( isset( $_POST['post_collection_active'] ) && $_POST['post_collection_active'] ) {
+				delete_user_option( $user->ID, 'friends_post_collection_inactive' );
+			} else {
+				update_user_option( $user->ID, 'friends_post_collection_inactive', true );
+			}
 		} else {
 			return;
 		}
@@ -321,6 +329,7 @@ class Post_Collection {
 		$user = $this->check_edit_post_collection();
 		$args = array(
 			'user'                => $user,
+			'active'              => ! get_user_option( 'friends_post_collection_inactive', $user->ID ),
 			'posts'               => new \WP_Query(
 				array(
 					'post_type'   => self::CPT,

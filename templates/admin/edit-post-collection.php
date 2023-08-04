@@ -11,6 +11,10 @@
 	<table class="form-table">
 		<tbody>
 			<tr>
+				<th><label for="display_name"><?php esc_html_e( 'Active', 'friends' ); ?></label></th>
+				<td><input type="checkbox" name="post_collection_active" id="active" value="1" <?php checked( $args['active'] ); ?> /></td>
+			</tr>
+			<tr>
 				<th><label for="display_name"><?php esc_html_e( 'Display Name', 'friends' ); ?></label></th>
 				<td><input type="text" name="display_name" id="display_name" value="<?php echo esc_attr( $args['user']->display_name ); ?>" class="regular-text" /></td>
 			</tr>
@@ -75,4 +79,10 @@
 	<p class="submit">
 		<input type="submit" id="submit" class="button button-primary" value="<?php /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ esc_html_e( 'Save Changes' ); ?>">
 	</p>
+
+	<p class="description">
+		<a href="<?php echo esc_url( self_admin_url( 'admin.php?page=friends-post-collection' ) ); ?>"><?php esc_html_e( 'Back to the Post Collection overview', 'friends' ); ?></a></p>
+
 </form>
+
+

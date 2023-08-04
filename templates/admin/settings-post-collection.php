@@ -10,6 +10,7 @@
 <form method="post">
 	<table class="widefat fixed striped">
 		<thead>
+			<th style="width: 4em"><?php esc_html_e( 'Active', 'friends' ); ?></th>
 			<th><?php esc_html_e( 'Post Collection Name', 'friends' ); ?></th>
 			<th><?php esc_html_e( 'External feed', 'friends' ); ?></th>
 			<th><?php esc_html_e( 'Bookmarklet', 'friends' ); ?></th>
@@ -20,6 +21,7 @@
 			$feed_url = trailingslashit( $user->get_local_friends_page_url() . 'feed' );
 			?>
 		<tr>
+		<td><?php echo get_user_option( 'friends_post_collection_inactive', $user->ID ) ? '' : '✅'; ?></td>
 		<td><a href="<?php echo esc_url( get_edit_user_link( $user->ID ) ); ?>"><?php echo esc_html( $user->display_name ); ?></a></td>
 		<td>
 			<?php
