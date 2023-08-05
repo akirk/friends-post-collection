@@ -1292,11 +1292,16 @@ class Post_Collection {
 		}
 
 		$dom = new \DOMDocument();
-		$dom->loadHTML( $post->post_content );
+		$dom->loadHTML( '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' . $post->post_content );
+
+		$home_host = wp_parse_url( home_url(), PHP_URL_HOST );
 
 		foreach ( $dom->getElementsByTagName( 'img' ) as $img ) {
 			$src = $img->getAttribute( 'src' );
 			$p = wp_parse_url( $src );
+			if ( $p['host'] === $home_host ) {
+				continue;
+			}
 			$filename = basename( $p['path'] );
 
 			// download the url to a temp file
@@ -1331,7 +1336,7 @@ class Post_Collection {
 
 		$post_data = array(
 			'ID'           => $post->ID,
-			'post_content' => force_balance_tags( wp_kses_post( $dom->saveXML( $dom->documentElement ) ) ),
+			'post_content' => force_balance_tags( wp_kses_post( $dom->saveHTML() ) ),
 			'meta_input'   => array(
 				'images-downloaded' => true,
 			),
