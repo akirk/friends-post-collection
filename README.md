@@ -15,8 +15,11 @@ This plugin provides the facilities to store feed items in a separate post type.
 
 ## Changelog
 
+### 1.2.1
+- Fix UTF-8 problems with downloading external images
+
 ### 1.2.0
-- Add ability to activate and deactivate Post Collections by ([#3])
+- Add ability to activate and deactivate Post Collections ([#3])
 - Add the ability to copy a post ([#4])
 - Add the ability to download external images to the media library ([#5])
 
