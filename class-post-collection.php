@@ -75,6 +75,7 @@ class Post_Collection {
 		add_action( 'friends_post_footer_first', array( $this, 'share_button' ) );
 		add_action( 'friends_feed_table_header', array( $this, 'feed_table_header' ) );
 		add_action( 'friends_feed_table_row', array( $this, 'feed_table_row' ), 10, 2 );
+		add_action( 'friends_feed_list_item', array( $this, 'feed_list_item' ), 10, 2 );
 		add_action( 'friends_process_feed_item_submit', array( $this, 'feed_item_submit' ), 10, 2 );
 		add_action( 'friends_modify_feed_item', array( $this, 'modify_feed_item' ), 10, 4 );
 		add_filter( 'friends_can_update_modified_feed_posts', array( $this, 'can_update_modified_feed_posts' ), 10, 5 );
@@ -1069,6 +1070,18 @@ class Post_Collection {
 		}
 		?>
 		<td style="padding-left: 1em"><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
+		<?php
+	}
+
+	public function feed_list_item( $feed, $term_id ) {
+		if ( ! $feed ) {
+			return;
+		}
+		?>
+		<tr>
+			<th><?php esc_html_e( 'Fetch Full Content', 'friends' ); ?></th>
+			<td><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
+		</tr>
 		<?php
 	}
 
