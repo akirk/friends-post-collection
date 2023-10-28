@@ -95,6 +95,30 @@
 					<p class="description">
 						<?php esc_html_e( 'Save articles from the web to this Post Collection using this bookmarklet. Drag it to your browser bar.', 'friends' ); ?></a></p>
 				</td>
+			</tr>			<tr>
+				<th><label><?php esc_html_e( 'Other tools', 'friends' ); ?></label></th>
+				<td>
+					<input type="text" id="friends-search-placeholder-url" value="<?php echo esc_attr( $args['post_collection_url'] . '&amp;url=%s' ); ?>" style="width: 30em" />
+					<button type="button" class="button" onclick="copyToClipboard()"><?php esc_html_e( 'Copy to clipboard', 'friends' ); ?></button>
+					<script>
+						function copyToClipboard() {
+							var input = document.getElementById("friends-search-placeholder-url");
+							input.select();
+
+							try {
+								var success = document.execCommand("copy");
+							} catch (err) {
+							}
+						}
+					</script>
+					<p class="description">
+						<?php echo wp_kses(
+							// translators: %1$s is a URL, %2$s is a URL.
+							__( 'In other tools such as <a href="%1$s">Alfred</a> or <a href="%2$s">URL Forwarder</a> you\'ll need a URL like this.', 'friends' ),
+							'https://www.alfredapp.com/',
+							'https://play.google.com/store/apps/details?id=net.daverix.urlforward'
+						); ?></a></p>
+				</td>
 			</tr>
 			<?php do_action( 'users_edit_post_collection_table_end', $args['user'] ); ?>
 		</tbody>
