@@ -423,7 +423,7 @@ class Post_Collection {
 	 * Process the Friends Create Post Collection page
 	 */
 	public function process_create_post_collection() {
-		$errors = new \WP_Error;
+		$errors = new \WP_Error();
 		$user   = $this->check_create_post_collection();
 
 		if ( ! $user->user_login ) {
@@ -765,25 +765,35 @@ class Post_Collection {
 		$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
 		if ( is_null( $post_id ) ) {
 			$item = $this->download( $url, $content );
-			if ( is_wp_error( $item ) ) {
-				return $item;
-			}
-
-			if ( ! $item->content && ! $item->title ) {
-				return new \WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends' ) );
-			}
-
-			$title   = strip_tags( trim( $item->title ) );
-			$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
-
 			$post_data = array(
-				'post_title'   => $title,
-				'post_content' => $content,
-				'post_status'  => 'private',
-				'post_author'  => $friend_user->ID,
-				'guid'         => $item->url,
-				'post_type'    => self::CPT,
+				'post_status' => 'private',
+				'post_author' => $friend_user->ID,
+				'guid'        => $url,
+				'post_type'   => self::CPT,
 			);
+			if ( is_wp_error( $item ) || ( ! $item->content && ! $item->title ) ) {
+				if ( $item->content ) {
+					$post_data['post_content'] = $item->content;
+				} else {
+					$post_data['post_content'] = '';
+				}
+				if ( $item->title ) {
+					$post_data['post_title'] = $item->title;
+				} else {
+					$path = parse_url( $url, PHP_URL_PATH );
+					$path = trim( $path, '/' );
+					$path = explode( '/', $path );
+					$slug = end( $path );
+					$slug = strtr( $slug, '-', ' ' );
+					$post_data['post_title'] = ucwords( $slug );
+				}
+			} else {
+				$title   = strip_tags( trim( $item->title ) );
+				$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
+
+				$post_data['post_title'] = $title;
+				$post_data['post_content'] = $content;
+			}
 
 			$post_id = wp_insert_post( $post_data, true );
 
@@ -831,7 +841,6 @@ class Post_Collection {
 
 		$item = $this->extract_content( $content, $url );
 		return $item;
-
 	}
 
 	/**
