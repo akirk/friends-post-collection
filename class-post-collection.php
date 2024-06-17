@@ -85,6 +85,7 @@ class Post_Collection {
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
 		add_action( 'wp_ajax_friends-post-collection-fetch-full-content', array( $this, 'wp_ajax_fetch_full_content' ) );
 		add_action( 'wp_ajax_friends-post-collection-download-images', array( $this, 'wp_ajax_download_images' ) );
+		\add_filter( 'friends_search_autocomplete', array( $this, 'friends_search_autocomplete' ), 20, 2 );
 	}
 
 	/**
@@ -971,6 +972,35 @@ class Post_Collection {
 		return $roles;
 	}
 
+	public function friends_search_autocomplete( $results, $q ) {
+		if ( Friends::check_url( $q ) ) {
+			foreach ( $this->get_post_collection_users()->get_results() as $user ) {
+				if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
+					continue;
+				}
+
+				$result = '<a href="' . esc_url(
+					add_query_arg(
+						array(
+							'collect-post' => $q,
+							'user'         => $user->ID,
+						),
+						home_url()
+					)
+				) . '" class="has-icon-left">';
+				$result .= '<span class="ab-icon dashicons dashicons-download"></span>';
+				$result .= 'Save ';
+				$result .= ' <small>';
+				$result .= esc_html( Friends::url_truncate( $q ) );
+				$result .= '</small> to ';
+				$result .= esc_html( $user->display_name );
+				$result .= '</a>';
+				$results[] = $result;
+			}
+		}
+		return $results;
+	}
+
 	/**
 	 * Potentially override the post author name with metadata.
 	 *
@@ -1353,7 +1383,6 @@ class Post_Collection {
 				$new_srcset = str_replace( $src, $new_src, $old_srcset );
 				$img->setAttribute( 'srcset', $new_srcset );
 			}
-
 		}
 
 		$post_data = array(
@@ -1457,7 +1486,7 @@ class Post_Collection {
 			'post_collection' => _x( 'Post Collection', 'User role', 'friends' ),
 		);
 
-		$roles = new \WP_Roles;
+		$roles = new \WP_Roles();
 
 		foreach ( $default_roles as $type => $name ) {
 			$role = false;
@@ -1506,6 +1535,5 @@ class Post_Collection {
 	public static function setup() {
 		self::setup_roles();
 		self::setup_default_user();
-
 	}
 }
