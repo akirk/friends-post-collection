@@ -1463,7 +1463,9 @@ class Post_Collection {
 		$capabilities = array();
 
 		$capabilities['post_collection'] = array(
-			'post_collection' => true,
+			'post_collection'      => true,
+			'edit_posts'           => true,
+			'edit_post_collection' => true,
 		);
 
 		// All roles belonging to this plugin have the friends_plugin capability.
