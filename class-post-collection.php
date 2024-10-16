@@ -1039,7 +1039,7 @@ class Post_Collection {
 	 */
 	function friends_friend_feed_viewable( $viewable, $author_login ) {
 		$author = get_user_by( 'login', $author_login );
-		if ( get_user_option( 'friends_publish_post_collection', $author->ID ) && $author->has_cap( 'post_collection' ) ) {
+		if ( $author && ! is_wp_error( $author ) && get_user_option( 'friends_publish_post_collection', $author->ID ) && $author->has_cap( 'post_collection' ) ) {
 			add_filter( 'pre_option_rss_use_excerpt', '__return_true', 30 );
 			return true;
 		}
