@@ -7,24 +7,55 @@ namespace Composer\Autoload;
 class ComposerStaticInitb7cf34a248b97b263071103a9f0b190d
 {
     public static $prefixLengthsPsr4 = array (
-        'a' => 
+        'f' => 
         array (
-            'andreskrey\\Readability\\' => 23,
+            'fivefilters\\Readability\\' => 24,
         ),
         'P' => 
         array (
             'Psr\\Log\\' => 8,
+            'Psr\\Http\\Message\\' => 17,
+        ),
+        'O' => 
+        array (
+            'Ozh\\Log\\' => 8,
+        ),
+        'M' => 
+        array (
+            'Masterminds\\' => 12,
+        ),
+        'L' => 
+        array (
+            'League\\Uri\\' => 11,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'andreskrey\\Readability\\' => 
+        'fivefilters\\Readability\\' => 
         array (
-            0 => __DIR__ . '/..' . '/andreskrey/readability.php/src',
+            0 => __DIR__ . '/..' . '/fivefilters/readability.php/src',
         ),
         'Psr\\Log\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/log/Psr/Log',
+        ),
+        'Psr\\Http\\Message\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-factory/src',
+            1 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'Ozh\\Log\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/ozh/log/src',
+        ),
+        'Masterminds\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/masterminds/html5/src',
+        ),
+        'League\\Uri\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/league/uri',
+            1 => __DIR__ . '/..' . '/league/uri-interfaces',
         ),
     );
 

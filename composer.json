@@ -1,6 +1,6 @@
 {
     "require": {
-        "andreskrey/readability.php": "^2.1"
+        "fivefilters/readability.php": "*"
     },
     "require-dev": {
         "ozh/log": "^1.0"

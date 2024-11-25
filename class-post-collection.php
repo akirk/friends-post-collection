@@ -858,7 +858,7 @@ class Post_Collection {
 			'url'     => $url,
 		);
 
-		$config = new \andreskrey\Readability\Configuration();
+		$config = new \fivefilters\Readability\Configuration();
 		$logger = null;
 		if ( class_exists( '\\Ozh\\Log\\Logger' ) ) {
 			$logger = new \Ozh\Log\Logger();
@@ -866,7 +866,7 @@ class Post_Collection {
 		}
 		$config->setFixRelativeURLs( true );
 		$config->setOriginalURL( $url );
-		$readability = new \andreskrey\Readability\Readability( $config );
+		$readability = new \fivefilters\Readability\Readability( $config );
 
 		try {
 			$readability->parse( $html );
@@ -875,7 +875,9 @@ class Post_Collection {
 			$item->author = $readability->getAuthor();
 
 			$item->content = str_replace( '&#xD;', '', $item->content );
-		} catch ( \andreskrey\Readability\ParseException $e ) {
+			$item->content = $this->prevent_autop_brs( $item->content );
+
+		} catch ( \fivefilters\Readability\ParseException $e ) {
 			return new \WP_Error(
 				'could-not-extract-content',
 				sprintf(
