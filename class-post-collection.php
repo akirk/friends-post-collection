@@ -41,6 +41,13 @@ class Post_Collection {
 	private $fetched_for_feed = array();
 
 	/**
+	 * Contains the site configs
+	 *
+	 * @var array
+	 */
+	private $site_configs = array();
+
+	/**
 	 * Constructor
 	 *
 	 * @param Friends $friends A reference to the Friends object.
@@ -133,6 +140,11 @@ class Post_Collection {
 
 		register_post_type( self::CPT, $args );
 	}
+
+	public function register_site_config( PostCollection\SiteConfig\SiteConfig $config ) {
+		$this->site_configs[] = $config;
+	}
+
 
 	public function friends_frontend_post_types( $post_types ) {
 		$post_types[] = self::CPT;
@@ -815,6 +827,16 @@ class Post_Collection {
 	 * @return object An item object.
 	 */
 	public function download( $url, $content = null ) {
+		foreach ( $this->site_configs as $site_config ) {
+			if ( $site_config->is_url_supported( $url ) ) {
+				$item = $site_config->download( $url, $content );
+				if ( is_wp_error( $item ) ) {
+					continue;
+				}
+				return $item;
+			}
+		}
+
 		global $wp_version;
 		$args = array(
 			'timeout'     => 20,
@@ -852,11 +874,7 @@ class Post_Collection {
 	 * @return object The parsed content.
 	 */
 	public function extract_content( $html, $url ) {
-		$item = (object) array(
-			'title'   => false,
-			'content' => false,
-			'url'     => $url,
-		);
+		$item = new ExtractedPage( $url );
 
 		$config = new \fivefilters\Readability\Configuration();
 		$logger = null;

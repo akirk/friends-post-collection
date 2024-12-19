@@ -22,15 +22,16 @@
 			?>
 		<tr>
 		<td><a href="<?php echo esc_url( get_edit_user_link( $user->ID ) ); ?>"><?php echo esc_html( $user->display_name ); ?></a></td>
-		<td><?php
-		if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
-			echo __( 'Hide', 'friends' );
-		} elseif ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
-			echo __( 'Copy to', 'friends' );
-		} else {
-			echo __( 'Move to', 'friends' );
-		}
-		?>
+		<td>
+			<?php
+			if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
+				echo __( 'Hide', 'friends' );
+			} elseif ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
+				echo __( 'Copy to', 'friends' );
+			} else {
+				echo __( 'Move to', 'friends' );
+			}
+			?>
 		</td>
 		<td>
 			<?php

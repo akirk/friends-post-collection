@@ -31,7 +31,7 @@
 									$args['user']->display_name
 								)
 							);
-						?>
+							?>
 					</option>
 					<option value="copy"<?php selected( ! $args['inactive'] && $args['copy_mode'] ); ?>>
 						<?php
@@ -42,7 +42,7 @@
 									$args['user']->display_name
 								)
 							);
-						?>
+							?>
 					</option>
 				</select>
 			</tr>
@@ -112,12 +112,15 @@
 						}
 					</script>
 					<p class="description">
-						<?php echo wp_kses(
+						<?php
+						echo wp_kses(
 							// translators: %1$s is a URL, %2$s is a URL.
 							__( 'In other tools such as <a href="%1$s">Alfred</a> or <a href="%2$s">URL Forwarder</a> you\'ll need a URL like this.', 'friends' ),
 							'https://www.alfredapp.com/',
 							'https://play.google.com/store/apps/details?id=net.daverix.urlforward'
-						); ?></a></p>
+						);
+						?>
+						</a></p>
 				</td>
 			</tr>
 			<?php do_action( 'users_edit_post_collection_table_end', $args['user'] ); ?>

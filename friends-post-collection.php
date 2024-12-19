@@ -27,12 +27,16 @@ define( 'FRIENDS_POST_COLLECTION_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/'
 
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/class-post-collection.php';
+require_once __DIR__ . '/class-extracted-page.php';
+require_once __DIR__ . '/site-configs/class-site-config.php';
+require_once __DIR__ . '/site-configs/class-youtube.php';
 
 add_filter( 'friends_post_collection', '__return_true' );
 add_action(
 	'friends_loaded',
-	function( $friends ) {
-		new Post_Collection( $friends );
+	function ( $friends ) {
+		$post_collection = new Post_Collection( $friends );
+		$post_collection->register_site_config( new PostCollection\SiteConfig\Youtube() );
 	}
 );
 
