@@ -92,7 +92,8 @@ class Post_Collection {
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
 		add_action( 'wp_ajax_friends-post-collection-fetch-full-content', array( $this, 'wp_ajax_fetch_full_content' ) );
 		add_action( 'wp_ajax_friends-post-collection-download-images', array( $this, 'wp_ajax_download_images' ) );
-		\add_filter( 'friends_search_autocomplete', array( $this, 'friends_search_autocomplete' ), 20, 2 );
+		add_filter( 'friends_search_autocomplete', array( $this, 'friends_search_autocomplete' ), 20, 2 );
+		add_filter( 'friends_browser_extension_rest_info', array( $this, 'friends_browser_extension_rest_info' ) );
 	}
 
 	/**
@@ -1184,6 +1185,28 @@ class Post_Collection {
 			}
 		}
 		return $results;
+	}
+
+	public function friends_browser_extension_rest_info( $info ) {
+		$post_collections = array();
+		foreach ( $this->get_post_collection_users()->get_results() as $user ) {
+			if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
+				continue;
+			}
+			$post_collections[] = array(
+				'id'   => $user->ID,
+				'name' => $user->display_name,
+				'url'  => $user->get_local_friends_page_url(),
+
+
+			);
+
+		}
+		if ( ! empty( $post_collections ) ) {
+			$info['post_collections'] = $post_collections;
+		}
+
+		return $info;
 	}
 
 	/**
