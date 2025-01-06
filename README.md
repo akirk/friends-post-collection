@@ -15,6 +15,9 @@ This plugin provides the facilities to store feed items in a separate post type.
 
 ## Changelog
 
+### 1.2.3
+- Supply post collections to the Friends browser extension
+
 ### 1.2.2
 - Switch the readability library to https://github.com/fivefilters/readability.php
 - Prevent wpautop to insert newlines where undesired
