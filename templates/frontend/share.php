@@ -7,8 +7,8 @@
  */
 
 ?><div class="friends-dropdown">
-	<a class="btn ml-1 friends-dropdown-toggle" tabindex="0">
-		<i class="dashicons dashicons-share"></i> <?php echo esc_html( _x( 'Share', 'button', 'friends' ) ); ?>
+	<a class="btn btn-link ml-1 friends-dropdown-toggle" tabindex="0" title="<?php echo esc_attr_x( 'Share', 'button', 'friends' ); ?>">
+		<i class="dashicons dashicons-share"></i> <span class="text"><?php echo esc_html_x( 'Share', 'button', 'friends' ); ?></span>
 	</a>
 	<ul class="menu" style="min-width: <?php echo esc_attr( intval( _x( '250', 'dropdown-menu-width', 'friends' ) ) ); ?>px">
 	<?php
