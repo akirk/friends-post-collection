@@ -729,6 +729,9 @@ class Post_Collection {
 			if ( ! intval( $_REQUEST['user'] ) ) {
 				return;
 			}
+			if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && isset( $_REQUEST['post-only'] ) ) {
+				return;
+			}
 			$saved_body = get_user_option( 'friends-post-collection_last_save', $_REQUEST['user'] );
 			list( $last_url, $last_body ) = explode( $delimiter, $saved_body ? $saved_body : $delimiter );
 			$url = wp_unslash( $_REQUEST['collect-post'] );
