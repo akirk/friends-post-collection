@@ -19,5 +19,8 @@ interface UriAccess
 {
     public function getUri(): UriInterface|Psr7UriInterface;
 
+    /**
+     * Returns the RFC3986 string representation of the complete URI.
+     */
     public function getUriString(): string;
 }

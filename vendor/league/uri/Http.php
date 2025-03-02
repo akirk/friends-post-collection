@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace League\Uri;
 
+use Deprecated;
 use JsonSerializable;
 use League\Uri\Contracts\UriException;
 use League\Uri\Contracts\UriInterface;
@@ -26,16 +27,49 @@ use Stringable;
  */
 final class Http implements Stringable, Psr7UriInterface, JsonSerializable
 {
-    private function __construct(private readonly UriInterface $uri)
+    private readonly UriInterface $uri;
+
+    private function __construct(UriInterface $uri)
     {
-        if (null === $this->uri->getScheme() && '' === $this->uri->getHost()) {
+        if (null === $uri->getScheme() && '' === $uri->getHost()) {
             throw new SyntaxError('An URI without scheme cannot contain an empty host string according to PSR-7: '.$uri);
         }
 
-        $port = $this->uri->getPort();
+        $port = $uri->getPort();
         if (null !== $port && ($port < 0 || $port > 65535)) {
             throw new SyntaxError('The URI port is outside the established TCP and UDP port ranges: '.$uri);
         }
+
+        $this->uri = $this->normalizePsr7Uri($uri);
+    }
+
+    /**
+     * PSR-7 UriInterface makes the following normalization.
+     *
+     * Safely stringify input when possible for League UriInterface compatibility.
+     *
+     * Query, Fragment and User Info when undefined are normalized to the empty string
+     */
+    private function normalizePsr7Uri(UriInterface $uri): UriInterface
+    {
+        $components = [];
+        if ('' === $uri->getFragment()) {
+            $components['fragment'] = null;
+        }
+
+        if ('' === $uri->getQuery()) {
+            $components['query'] = null;
+        }
+
+        if ('' === $uri->getUserInfo()) {
+            $components['user'] = null;
+            $components['pass'] = null;
+        }
+
+        return match ($components) {
+            [] => $uri,
+            default => Uri::fromComponents([...$uri->toComponents(), ...$components]),
+        };
     }
 
     /**
@@ -43,10 +77,7 @@ final class Http implements Stringable, Psr7UriInterface, JsonSerializable
      */
     public static function new(Stringable|string $uri = ''): self
     {
-        return match (true) {
-            $uri instanceof UriInterface => new self($uri),
-            default => new self(Uri::new($uri)),
-        };
+        return self::fromComponents(UriString::parse($uri));
     }
 
     /**
@@ -57,6 +88,27 @@ final class Http implements Stringable, Psr7UriInterface, JsonSerializable
      */
     public static function fromComponents(array $components): self
     {
+        $components += [
+            'scheme' => null, 'user' => null, 'pass' => null, 'host' => null,
+            'port' => null, 'path' => '', 'query' => null, 'fragment' => null,
+        ];
+
+        if ('' === $components['user']) {
+            $components['user'] = null;
+        }
+
+        if ('' === $components['pass']) {
+            $components['pass'] = null;
+        }
+
+        if ('' === $components['query']) {
+            $components['query'] = null;
+        }
+
+        if ('' === $components['fragment']) {
+            $components['fragment'] = null;
+        }
+
         return new self(Uri::fromComponents($components));
     }
 
@@ -202,6 +254,7 @@ final class Http implements Stringable, Psr7UriInterface, JsonSerializable
      *
      * Create a new instance from a string.
      */
+    #[Deprecated(message:'use League\Uri\Http::new() instead', since:'league/uri:7.0.0')]
     public static function createFromString(Stringable|string $uri = ''): self
     {
         return self::new($uri);
@@ -219,6 +272,7 @@ final class Http implements Stringable, Psr7UriInterface, JsonSerializable
      * @param InputComponentMap $components a hash representation of the URI similar
      *                                      to PHP parse_url function result
      */
+    #[Deprecated(message:'use League\Uri\Http::fromComponents() instead', since:'league/uri:7.0.0')]
     public static function createFromComponents(array $components): self
     {
         return self::fromComponents($components);
@@ -233,6 +287,7 @@ final class Http implements Stringable, Psr7UriInterface, JsonSerializable
      *
      * Create a new instance from the environment.
      */
+    #[Deprecated(message:'use League\Uri\Http::fromServer() instead', since:'league/uri:7.0.0')]
     public static function createFromServer(array $server): self
     {
         return self::fromServer($server);
@@ -247,6 +302,7 @@ final class Http implements Stringable, Psr7UriInterface, JsonSerializable
      *
      * Create a new instance from a URI object.
      */
+    #[Deprecated(message:'use League\Uri\Http::new() instead', since:'league/uri:7.0.0')]
     public static function createFromUri(Psr7UriInterface|UriInterface $uri): self
     {
         return self::new($uri);
@@ -263,6 +319,7 @@ final class Http implements Stringable, Psr7UriInterface, JsonSerializable
      *
      * The returned URI must be absolute.
      */
+    #[Deprecated(message:'use League\Uri\Http::fromBaseUri() instead', since:'league/uri:7.0.0')]
     public static function createFromBaseUri(Stringable|string $uri, Stringable|string|null $baseUri = null): self
     {
         return self::fromBaseUri($uri, $baseUri);
