@@ -729,9 +729,6 @@ class Post_Collection {
 			if ( ! intval( $_REQUEST['user'] ) ) {
 				return;
 			}
-			if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && isset( $_REQUEST['post-only'] ) ) {
-				return;
-			}
 			$saved_body = get_user_option( 'friends-post-collection_last_save', $_REQUEST['user'] );
 			list( $last_url, $last_body ) = explode( $delimiter, $saved_body ? $saved_body : $delimiter );
 			$url = wp_unslash( $_REQUEST['collect-post'] );
@@ -745,6 +742,20 @@ class Post_Collection {
 
 		if ( ! $url ) {
 			return;
+		}
+		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && isset( $_REQUEST['post-only'] ) ) {
+			$friend_user = new User( intval( $_REQUEST['user'] ) );
+			$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
+			if ( ! $post_id ) {
+				$_REQUEST['post-only'] += 1;
+				if ( $_REQUEST['post-only'] <= 3 ) {
+					sleep( 1 );
+					wp_safe_redirect( add_query_arg( $_REQUEST, home_url( '/' ) ) );
+					exit;
+				}
+			}
+			wp_safe_redirect( $friend_user->get_local_friends_page_url( $post_id ) );
+			exit;
 		}
 
 		if ( $body ) {
