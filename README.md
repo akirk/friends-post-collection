@@ -15,6 +15,9 @@ This plugin provides the facilities to store feed items in a separate post type.
 
 ## Changelog
 
+### 1.2.5
+- Prevent double submission from the browser extension
+
 ### 1.2.4
 - Update Share button to the new Friends styling
 
