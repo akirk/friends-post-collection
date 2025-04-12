@@ -1,95 +1,42 @@
-<?php return array(
-    'root' => array(
-        'name' => '__root__',
-        'pretty_version' => 'dev-main',
-        'version' => 'dev-main',
-        'reference' => 'e163a209a637dac80251fa47e2aa0638c4541af6',
-        'type' => 'library',
-        'install_path' => __DIR__ . '/../../',
-        'aliases' => array(),
-        'dev' => true,
+<?php return array (
+  'root' => 
+  array (
+    'pretty_version' => 'dev-main',
+    'version' => 'dev-main',
+    'aliases' => 
+    array (
     ),
-    'versions' => array(
-        '__root__' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => 'e163a209a637dac80251fa47e2aa0638c4541af6',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../../',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
-        'fivefilters/readability.php' => array(
-            'pretty_version' => 'v3.3.1',
-            'version' => '3.3.1.0',
-            'reference' => '705feb540737f81204af43295d406d874e59f8bd',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../fivefilters/readability.php',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
-        'league/uri' => array(
-            'pretty_version' => '7.5.1',
-            'version' => '7.5.1.0',
-            'reference' => '81fb5145d2644324614cc532b28efd0215bda430',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../league/uri',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
-        'league/uri-interfaces' => array(
-            'pretty_version' => '7.5.0',
-            'version' => '7.5.0.0',
-            'reference' => '08cfc6c4f3d811584fb09c37e2849e6a7f9b0742',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../league/uri-interfaces',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
-        'masterminds/html5' => array(
-            'pretty_version' => '2.9.0',
-            'version' => '2.9.0.0',
-            'reference' => 'f5ac2c0b0a2eefca70b2ce32a5809992227e75a6',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../masterminds/html5',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
-        'ozh/log' => array(
-            'pretty_version' => 'v1.0',
-            'version' => '1.0.0.0',
-            'reference' => '1143ba220b66634d7ed09dd28a2ad0c9fcfa6616',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../ozh/log',
-            'aliases' => array(),
-            'dev_requirement' => true,
-        ),
-        'psr/http-factory' => array(
-            'pretty_version' => '1.1.0',
-            'version' => '1.1.0.0',
-            'reference' => '2b4765fddfe3b508ac62f829e852b1501d3f6e8a',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../psr/http-factory',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
-        'psr/http-message' => array(
-            'pretty_version' => '2.0',
-            'version' => '2.0.0.0',
-            'reference' => '402d35bcb92c70c026d1a6a9883f06b2ead23d71',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../psr/http-message',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
-        'psr/log' => array(
-            'pretty_version' => '1.1.4',
-            'version' => '1.1.4.0',
-            'reference' => 'd49695b909c3b7628b6289db5479a1c204601f11',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../psr/log',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
+    'reference' => '3f410bed07c0b66f4a5c494854bc74f14708d074',
+    'name' => '__root__',
+  ),
+  'versions' => 
+  array (
+    '__root__' => 
+    array (
+      'pretty_version' => 'dev-main',
+      'version' => 'dev-main',
+      'aliases' => 
+      array (
+      ),
+      'reference' => '3f410bed07c0b66f4a5c494854bc74f14708d074',
     ),
+    'andreskrey/readability.php' => 
+    array (
+      'pretty_version' => 'v2.1.0',
+      'version' => '2.1.0.0',
+      'aliases' => 
+      array (
+      ),
+      'reference' => '7617a912b6c527909168f5d41d263792f171c42a',
+    ),
+    'psr/log' => 
+    array (
+      'pretty_version' => '1.1.4',
+      'version' => '1.1.4.0',
+      'aliases' => 
+      array (
+      ),
+      'reference' => 'd49695b909c3b7628b6289db5479a1c204601f11',
+    ),
+  ),
 );

@@ -895,7 +895,7 @@ class Post_Collection {
 	public function extract_content( $html, $url ) {
 		$item = new ExtractedPage( $url );
 
-		$config = new \fivefilters\Readability\Configuration();
+		$config = new \andreskrey\Readability\Configuration();
 		$logger = null;
 		if ( class_exists( '\\Ozh\\Log\\Logger' ) ) {
 			$logger = new \Ozh\Log\Logger();
@@ -903,7 +903,7 @@ class Post_Collection {
 		}
 		$config->setFixRelativeURLs( true );
 		$config->setOriginalURL( $url );
-		$readability = new \fivefilters\Readability\Readability( $config );
+		$readability = new \andreskrey\Readability\Readability( $config );
 
 		try {
 			$readability->parse( $html );
@@ -912,9 +912,7 @@ class Post_Collection {
 			$item->author = $readability->getAuthor();
 
 			$item->content = str_replace( '&#xD;', '', $item->content );
-			$item->content = $this->prevent_autop_brs( $item->content );
-
-		} catch ( \fivefilters\Readability\ParseException $e ) {
+		} catch ( \andreskrey\Readability\ParseException $e ) {
 			return new \WP_Error(
 				'could-not-extract-content',
 				sprintf(
