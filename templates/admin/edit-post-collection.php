@@ -114,10 +114,17 @@
 					<p class="description">
 						<?php
 						echo wp_kses(
-							// translators: %1$s is a URL, %2$s is a URL.
-							__( 'In other tools such as <a href="%1$s">Alfred</a> or <a href="%2$s">URL Forwarder</a> you\'ll need a URL like this.', 'friends' ),
-							'https://www.alfredapp.com/',
-							'https://play.google.com/store/apps/details?id=net.daverix.urlforward'
+							sprintf(
+								// translators: %1$s is a URL, %2$s is a URL.
+								__( 'In other tools such as <a href="%1$s">Alfred</a> or <a href="%2$s">URL Forwarder</a> you\'ll need a URL like this.', 'friends' ),
+								'https://www.alfredapp.com/',
+								'https://play.google.com/store/apps/details?id=net.daverix.urlforward'
+							),
+							array(
+								'a' => array(
+									'href' => array(),
+								),
+							)
 						);
 						?>
 						</a></p>

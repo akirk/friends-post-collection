@@ -749,8 +749,12 @@ class Post_Collection {
 			if ( ! $post_id ) {
 				$_REQUEST['post-only'] += 1;
 				if ( $_REQUEST['post-only'] <= 3 ) {
-					sleep( 1 );
+					sleep( 3 - $_REQUEST['post-only'] );
 					wp_safe_redirect( add_query_arg( $_REQUEST, home_url( '/' ) ) );
+					exit;
+				} else {
+					// We tried 3 times, so let's remove the post-only and import it via GET.
+					wp_safe_redirect( remove_query_arg( 'post-only' ) );
 					exit;
 				}
 			}
