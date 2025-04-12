@@ -216,7 +216,7 @@ class Post_Collection {
 			echo wp_kses( $divider, $list_tags );
 			$divider = '';
 			?>
-			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ? ' copy-mode' : '' ); ?>">
+			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-originalauthor="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ? ' copy-mode' : '' ); ?>">
 				<?php
 				if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
 					echo esc_html(
@@ -1458,35 +1458,40 @@ class Post_Collection {
 			wp_send_json_error( 'error' );
 		}
 
-		$user = new User( $_POST['author'] );
-		if ( is_wp_error( $user ) ) {
+		$new_author = new User( $_POST['author'] );
+		if ( is_wp_error( $new_author ) ) {
 			wp_send_json_error( 'error' );
 		}
-		if ( ! User::is_friends_plugin_user( $user ) && ! $user->has_cap( 'post_collection' ) ) {
+		if ( ! User::is_friends_plugin_user( $new_author ) && ! $new_author->has_cap( 'post_collection' ) ) {
 			wp_send_json_error( 'error' );
 		}
 
-		$first = new User( $_POST['first'] );
+		$originalauthor = User::get_user_by_id( $_POST['originalauthor'] );
 		$new_text = __( 'Undo' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 
 		$post = get_post( $_POST['id'] );
-		$old_author = $post->post_author;
-		$post->post_author = $user->ID;
-		if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
+
+		$old_author = User::get_post_author( $post );
+
+		$post->post_author = $new_author->ID;
+		if ( get_user_option( 'friends_post_collection_copy_mode', $new_author->ID ) ) {
 			unset( $post->ID );
-			$user->insert_post( (array) $post );
+			$new_author->insert_post( (array) $post );
 			$new_text = sprintf(
 				// translators: %s is the name of a post collection.
 				__( 'Copied to %s!', 'post-collection', 'friends' ),
-				$user->display_name
+				$new_author->display_name
 			);
 		} else {
-			$user->insert_post( (array) $post );
-			if ( intval( $old_author ) !== $first->ID ) {
+			$new_author->insert_post( (array) $post );
+			if ( $old_author instanceof Subscription ) {
+				wp_remove_object_terms( $post->ID, $old_author->get_term_id(), Subscription::TAXONOMY );
+			}
+			if ( $old_author->ID !== $originalauthor->ID ) {
 				$new_text = sprintf(
 					// translators: %s is the name of a post collection.
-					_x( 'Move to %s', 'post-collection', 'friends' ),
-					$first->display_name
+					_x( 'Moved to %s!', 'post-collection', 'friends' ),
+					$originalauthor->display_name
 				);
 			}
 		}
@@ -1494,7 +1499,7 @@ class Post_Collection {
 		wp_send_json_success(
 			array(
 				'new_text'   => $new_text,
-				'old_author' => $old_author,
+				'old_author' => $old_author->ID,
 			)
 		);
 	}
