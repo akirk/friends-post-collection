@@ -1487,7 +1487,7 @@ class Post_Collection {
 			if ( $old_author instanceof Subscription ) {
 				wp_remove_object_terms( $post->ID, $old_author->get_term_id(), Subscription::TAXONOMY );
 			}
-			if ( $old_author->ID !== $originalauthor->ID ) {
+			if ( $new_author->ID !== $originalauthor->ID ) {
 				$new_text = sprintf(
 					// translators: %s is the name of a post collection.
 					_x( 'Moved to %s!', 'post-collection', 'friends' ),
