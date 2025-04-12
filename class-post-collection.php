@@ -1491,7 +1491,7 @@ class Post_Collection {
 				$new_text = sprintf(
 					// translators: %s is the name of a post collection.
 					_x( 'Moved to %s!', 'post-collection', 'friends' ),
-					$originalauthor->display_name
+					$new_author->display_name
 				);
 			}
 		}
