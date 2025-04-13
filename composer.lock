@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2a37019b27f1590966011df3bf6e135b",
+    "content-hash": "8344a148615e1d96dce9499c1bcb5b56",
     "packages": [
         {
             "name": "andreskrey/readability.php",
@@ -61,6 +61,7 @@
                 "issues": "https://github.com/andreskrey/readability.php/issues",
                 "source": "https://github.com/andreskrey/readability.php/tree/v2.1.0"
             },
+            "abandoned": "fivefilters/readability.php",
             "time": "2019-07-22T21:42:25+00:00"
         },
         {
@@ -114,13 +115,65 @@
             "time": "2021-05-03T11:20:27+00:00"
         }
     ],
-    "packages-dev": [],
+    "packages-dev": [
+        {
+            "name": "ozh/log",
+            "version": "v1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ozh/log.git",
+                "reference": "1143ba220b66634d7ed09dd28a2ad0c9fcfa6616"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/ozh/log/zipball/1143ba220b66634d7ed09dd28a2ad0c9fcfa6616",
+                "reference": "1143ba220b66634d7ed09dd28a2ad0c9fcfa6616",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3",
+                "psr/log": "^1.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": ">=4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Ozh\\Log\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "ozh",
+                    "homepage": "https://ozh.org/"
+                }
+            ],
+            "description": "Simple PSR-3 logger to log messages into an array",
+            "homepage": "https://github.com/ozh/log",
+            "keywords": [
+                "PSR3",
+                "log",
+                "ozh",
+                "psr-3"
+            ],
+            "support": {
+                "issues": "https://github.com/ozh/log/issues",
+                "source": "https://github.com/ozh/log/tree/master"
+            },
+            "time": "2017-08-17T12:10:15+00:00"
+        }
+    ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": [],
-    "platform-dev": [],
-    "plugin-api-version": "2.0.0"
+    "platform": {},
+    "platform-dev": {},
+    "plugin-api-version": "2.6.0"
 }

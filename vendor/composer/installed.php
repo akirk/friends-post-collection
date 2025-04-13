@@ -1,42 +1,50 @@
-<?php return array (
-  'root' => 
-  array (
-    'pretty_version' => 'dev-main',
-    'version' => 'dev-main',
-    'aliases' => 
-    array (
+<?php return array(
+    'root' => array(
+        'name' => '__root__',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '3d8b2d2636a4fbb320f30ea257fd666230ada35a',
+        'type' => 'library',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => true,
     ),
-    'reference' => '3f410bed07c0b66f4a5c494854bc74f14708d074',
-    'name' => '__root__',
-  ),
-  'versions' => 
-  array (
-    '__root__' => 
-    array (
-      'pretty_version' => 'dev-main',
-      'version' => 'dev-main',
-      'aliases' => 
-      array (
-      ),
-      'reference' => '3f410bed07c0b66f4a5c494854bc74f14708d074',
+    'versions' => array(
+        '__root__' => array(
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '3d8b2d2636a4fbb320f30ea257fd666230ada35a',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'andreskrey/readability.php' => array(
+            'pretty_version' => 'v2.1.0',
+            'version' => '2.1.0.0',
+            'reference' => '7617a912b6c527909168f5d41d263792f171c42a',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../andreskrey/readability.php',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'ozh/log' => array(
+            'pretty_version' => 'v1.0',
+            'version' => '1.0.0.0',
+            'reference' => '1143ba220b66634d7ed09dd28a2ad0c9fcfa6616',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../ozh/log',
+            'aliases' => array(),
+            'dev_requirement' => true,
+        ),
+        'psr/log' => array(
+            'pretty_version' => '1.1.4',
+            'version' => '1.1.4.0',
+            'reference' => 'd49695b909c3b7628b6289db5479a1c204601f11',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../psr/log',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
     ),
-    'andreskrey/readability.php' => 
-    array (
-      'pretty_version' => 'v2.1.0',
-      'version' => '2.1.0.0',
-      'aliases' => 
-      array (
-      ),
-      'reference' => '7617a912b6c527909168f5d41d263792f171c42a',
-    ),
-    'psr/log' => 
-    array (
-      'pretty_version' => '1.1.4',
-      'version' => '1.1.4.0',
-      'aliases' => 
-      array (
-      ),
-      'reference' => 'd49695b909c3b7628b6289db5479a1c204601f11',
-    ),
-  ),
 );
