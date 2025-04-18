@@ -64,7 +64,9 @@ jQuery( function ( $ ) {
 			}
 		} );
 		return false;
-	} ); $document.on( 'click', 'a.friends-post-collection-download-images', function () {
+	} );
+
+	$document.on( 'click', 'a.friends-post-collection-download-images', function () {
 		var $this = $( this );
 		var search_indicator = $this.find( 'i' );
 		if ( search_indicator.hasClass( 'loading' ) ) {
@@ -87,6 +89,11 @@ jQuery( function ( $ ) {
 				search_indicator.removeClass( 'form-icon loading' ).addClass( 'dashicons dashicons-warning' ).prop( 'title', e );
 			}
 		} );
+		return false;
+	} );
+
+	$document.on( 'click', 'a.post-collection-fetch-url-opener', function () {
+		$( '#post-collection-fetch-form' ).toggleClass( 'd-hide' ).find( 'input[type=url]' ).focus();
 		return false;
 	} );
 } );

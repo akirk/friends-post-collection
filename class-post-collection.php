@@ -79,6 +79,7 @@ class Post_Collection {
 		add_action( 'friends_override_author_name', array( $this, 'friends_override_author_name' ), 15, 3 );
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
+		add_action( 'friends_author_header', array( $this, 'enter_url_field' ) );
 		add_action( 'friends_post_footer_first', array( $this, 'share_button' ) );
 		add_action( 'friends_feed_table_header', array( $this, 'feed_table_header' ) );
 		add_action( 'friends_feed_table_row', array( $this, 'feed_table_row' ), 10, 2 );
@@ -1214,7 +1215,6 @@ class Post_Collection {
 				'name' => $user->display_name,
 				'url'  => $user->get_local_friends_page_url(),
 
-
 			);
 
 		}
@@ -1317,6 +1317,16 @@ class Post_Collection {
 			null,
 			array(
 				'post-collections' => $this->get_post_collection_users()->get_results(),
+			)
+		);
+	}
+
+	public function enter_url_field( $user ) {
+		$this->template_loader()->get_template_part(
+			'frontend/enter-url',
+			null,
+			array(
+				'friend_user' => $user,
 			)
 		);
 	}
