@@ -1322,13 +1322,15 @@ class Post_Collection {
 	}
 
 	public function enter_url_field( $user ) {
-		$this->template_loader()->get_template_part(
-			'frontend/enter-url',
-			null,
-			array(
-				'friend_user' => $user,
-			)
-		);
+		if ( $user->has_cap( 'post_collection' ) ) {
+			$this->template_loader()->get_template_part(
+				'frontend/enter-url',
+				null,
+				array(
+					'friend_user' => $user,
+				)
+			);
+		}
 	}
 
 	public function feed_table_header() {
