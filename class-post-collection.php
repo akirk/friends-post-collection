@@ -175,9 +175,20 @@ class Post_Collection {
 	}
 
 	public function friends_show_author_edit( $show, $friend_user ) {
-		if ( $friend_user->has_cap( 'post_collection' ) ) {
+		static $cache = array();
+		if ( isset( $cache[ $friend_user->ID ] ) ) {
+			if ( $cache[ $friend_user->ID ] ) {
+				return $show;
+			}
 			return false;
 		}
+
+		if ( $friend_user->has_cap( 'post_collection' ) ) {
+			$cache[ $friend_user->ID ] = false;
+			return false;
+		}
+
+		$cache[ $friend_user->ID ] = true;
 		return $show;
 	}
 
@@ -1534,6 +1545,20 @@ class Post_Collection {
 		}
 
 		$url = get_permalink( $post );
+		$href = null;
+
+		// Check if the post content contains as "read more" link.
+		$parser = new \WP_HTML_Tag_Processor( $post->post_content );
+		while ( $parser->next_tag( 'a' ) ) {
+			$href = $parser->get_attribute( 'href' );
+			$parser->next_token();
+			if ( 'read more' === strtolower( trim( $parser->get_modifiable_text() ) ) ) {
+				$url = $href;
+				break;
+			}
+			$href = null;
+		}
+
 		$item = $this->download( $url );
 		if ( is_wp_error( $item ) ) {
 			wp_send_json_error( $item );
@@ -1548,6 +1573,11 @@ class Post_Collection {
 		$title   = strip_tags( trim( $item->title ) );
 		$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
 
+		if ( $href ) {
+			// The permalink is not the same as the original URL, so we add it to the content.
+			$content = 'Source: <a href="' . esc_url( $href ) . '">' . esc_html( $href ) . "</a><br>\n<br>\n" . $content;
+		}
+
 		$post_data = array(
 			'ID'           => $post->ID,
 			'post_title'   => $title,
@@ -1561,6 +1591,7 @@ class Post_Collection {
 
 		wp_send_json_success(
 			array(
+				'url'         => $url,
 				'post_title'   => $title,
 				'post_content' => $content,
 			)
