@@ -15,6 +15,10 @@ This plugin provides the facilities to store feed items in a separate post type.
 
 ## Changelog
 
+### 1.2.6
+- Use a Read More link as fetch url if exists ([#10])
+- Use HTML API in post collection ([#6])
+
 ### 1.2.5
 - Prevent double submission from the browser extension
 
@@ -46,6 +50,8 @@ This plugin provides the facilities to store feed items in a separate post type.
 ### 0.8
 - Update for Friends 2.0
 
+[#10]: https://github.com/akirk/friends-post-collection/pull/10
+[#6]: https://github.com/akirk/friends-post-collection/pull/6
 [#5]: https://github.com/akirk/friends-post-collection/pull/5
 [#4]: https://github.com/akirk/friends-post-collection/pull/4
 [#3]: https://github.com/akirk/friends-post-collection/pull/3
