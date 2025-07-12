@@ -41,6 +41,13 @@ class Post_Collection {
 	private $fetched_for_feed = array();
 
 	/**
+	 * Contains the site configs
+	 *
+	 * @var array
+	 */
+	private $site_configs = array();
+
+	/**
 	 * Constructor
 	 *
 	 * @param Friends $friends A reference to the Friends object.
@@ -72,9 +79,11 @@ class Post_Collection {
 		add_action( 'friends_override_author_name', array( $this, 'friends_override_author_name' ), 15, 3 );
 		add_action( 'friends_widget_friend_list_after', array( $this, 'friends_widget_friend_list_after' ), 10, 2 );
 		add_action( 'friends_author_header', array( $this, 'friends_author_header' ) );
+		add_action( 'friends_author_header', array( $this, 'enter_url_field' ) );
 		add_action( 'friends_post_footer_first', array( $this, 'share_button' ) );
 		add_action( 'friends_feed_table_header', array( $this, 'feed_table_header' ) );
 		add_action( 'friends_feed_table_row', array( $this, 'feed_table_row' ), 10, 2 );
+		add_action( 'friends_feed_list_item', array( $this, 'feed_list_item' ), 10, 2 );
 		add_action( 'friends_process_feed_item_submit', array( $this, 'feed_item_submit' ), 10, 2 );
 		add_action( 'friends_modify_feed_item', array( $this, 'modify_feed_item' ), 10, 4 );
 		add_filter( 'friends_can_update_modified_feed_posts', array( $this, 'can_update_modified_feed_posts' ), 10, 5 );
@@ -84,6 +93,8 @@ class Post_Collection {
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
 		add_action( 'wp_ajax_friends-post-collection-fetch-full-content', array( $this, 'wp_ajax_fetch_full_content' ) );
 		add_action( 'wp_ajax_friends-post-collection-download-images', array( $this, 'wp_ajax_download_images' ) );
+		add_filter( 'friends_search_autocomplete', array( $this, 'friends_search_autocomplete' ), 20, 2 );
+		add_filter( 'friends_browser_extension_rest_info', array( $this, 'friends_browser_extension_rest_info' ) );
 	}
 
 	/**
@@ -132,6 +143,11 @@ class Post_Collection {
 		register_post_type( self::CPT, $args );
 	}
 
+	public function register_site_config( PostCollection\SiteConfig\SiteConfig $config ) {
+		$this->site_configs[] = $config;
+	}
+
+
 	public function friends_frontend_post_types( $post_types ) {
 		$post_types[] = self::CPT;
 		return $post_types;
@@ -159,9 +175,20 @@ class Post_Collection {
 	}
 
 	public function friends_show_author_edit( $show, $friend_user ) {
-		if ( $friend_user->has_cap( 'post_collection' ) ) {
+		static $cache = array();
+		if ( isset( $cache[ $friend_user->ID ] ) ) {
+			if ( $cache[ $friend_user->ID ] ) {
+				return $show;
+			}
 			return false;
 		}
+
+		if ( $friend_user->has_cap( 'post_collection' ) ) {
+			$cache[ $friend_user->ID ] = false;
+			return false;
+		}
+
+		$cache[ $friend_user->ID ] = true;
 		return $show;
 	}
 
@@ -201,7 +228,7 @@ class Post_Collection {
 			echo wp_kses( $divider, $list_tags );
 			$divider = '';
 			?>
-			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-first="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ? ' copy-mode' : '' ); ?>">
+			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-originalauthor="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ? ' copy-mode' : '' ); ?>">
 				<?php
 				if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
 					echo esc_html(
@@ -422,7 +449,7 @@ class Post_Collection {
 	 * Process the Friends Create Post Collection page
 	 */
 	public function process_create_post_collection() {
-		$errors = new \WP_Error;
+		$errors = new \WP_Error();
 		$user   = $this->check_create_post_collection();
 
 		if ( ! $user->user_login ) {
@@ -728,6 +755,24 @@ class Post_Collection {
 		if ( ! $url ) {
 			return;
 		}
+		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && isset( $_REQUEST['post-only'] ) ) {
+			$friend_user = new User( intval( $_REQUEST['user'] ) );
+			$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
+			if ( ! $post_id ) {
+				$_REQUEST['post-only'] += 1;
+				if ( $_REQUEST['post-only'] <= 3 ) {
+					sleep( 3 - $_REQUEST['post-only'] );
+					wp_safe_redirect( add_query_arg( $_REQUEST, home_url( '/' ) ) );
+					exit;
+				} else {
+					// We tried 3 times, so let's remove the post-only and import it via GET.
+					wp_safe_redirect( remove_query_arg( 'post-only' ) );
+					exit;
+				}
+			}
+			wp_safe_redirect( $friend_user->get_local_friends_page_url( $post_id ) );
+			exit;
+		}
 
 		if ( $body ) {
 			update_user_option( $_REQUEST['user'], 'friends-post-collection_last_save', $url . $delimiter . $body );
@@ -764,25 +809,35 @@ class Post_Collection {
 		$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
 		if ( is_null( $post_id ) ) {
 			$item = $this->download( $url, $content );
-			if ( is_wp_error( $item ) ) {
-				return $item;
-			}
-
-			if ( ! $item->content && ! $item->title ) {
-				return new \WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends' ) );
-			}
-
-			$title   = strip_tags( trim( $item->title ) );
-			$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
-
 			$post_data = array(
-				'post_title'   => $title,
-				'post_content' => $content,
-				'post_status'  => 'private',
-				'post_author'  => $friend_user->ID,
-				'guid'         => $item->url,
-				'post_type'    => self::CPT,
+				'post_status' => 'private',
+				'post_author' => $friend_user->ID,
+				'guid'        => $url,
+				'post_type'   => self::CPT,
 			);
+			if ( is_wp_error( $item ) || ( ! $item->content && ! $item->title ) ) {
+				if ( $item->content ) {
+					$post_data['post_content'] = $item->content;
+				} else {
+					$post_data['post_content'] = '';
+				}
+				if ( $item->title ) {
+					$post_data['post_title'] = $item->title;
+				} else {
+					$path = parse_url( $url, PHP_URL_PATH );
+					$path = trim( $path, '/' );
+					$path = explode( '/', $path );
+					$slug = end( $path );
+					$slug = strtr( $slug, '-', ' ' );
+					$post_data['post_title'] = ucwords( $slug );
+				}
+			} else {
+				$title   = strip_tags( trim( $item->title ) );
+				$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
+
+				$post_data['post_title'] = $title;
+				$post_data['post_content'] = $content;
+			}
 
 			$post_id = wp_insert_post( $post_data, true );
 
@@ -803,6 +858,16 @@ class Post_Collection {
 	 * @return object An item object.
 	 */
 	public function download( $url, $content = null ) {
+		foreach ( $this->site_configs as $site_config ) {
+			if ( $site_config->is_url_supported( $url ) ) {
+				$item = $site_config->download( $url, $content );
+				if ( is_wp_error( $item ) ) {
+					continue;
+				}
+				return $item;
+			}
+		}
+
 		global $wp_version;
 		$args = array(
 			'timeout'     => 20,
@@ -830,7 +895,6 @@ class Post_Collection {
 
 		$item = $this->extract_content( $content, $url );
 		return $item;
-
 	}
 
 	/**
@@ -841,11 +905,7 @@ class Post_Collection {
 	 * @return object The parsed content.
 	 */
 	public function extract_content( $html, $url ) {
-		$item = (object) array(
-			'title'   => false,
-			'content' => false,
-			'url'     => $url,
-		);
+		$item = new ExtractedPage( $url );
 
 		$config = new \andreskrey\Readability\Configuration();
 		$logger = null;
@@ -933,6 +993,171 @@ class Post_Collection {
 		return $html;
 	}
 
+	public function prevent_autop_brs( $text ) {
+		// We do the same as wpautop but we replace the newline with a space.
+		$br = true;
+
+		$pre_tags = array();
+
+		if ( trim( $text ) === '' ) {
+			return '';
+		}
+
+		// Just to make things a little easier, pad the end.
+		$text = $text . "\n";
+
+		/*
+		 * Pre tags shouldn't be touched by autop.
+		 * Replace pre tags with placeholders and bring them back after autop.
+		 */
+		if ( str_contains( $text, '<pre' ) ) {
+			$text_parts = explode( '</pre>', $text );
+			$last_part  = array_pop( $text_parts );
+			$text       = '';
+			$i          = 0;
+
+			foreach ( $text_parts as $text_part ) {
+				$start = strpos( $text_part, '<pre' );
+
+				// Malformed HTML?
+				if ( false === $start ) {
+					$text .= $text_part;
+					continue;
+				}
+
+				$name              = "<pre wp-pre-tag-$i></pre>";
+				$pre_tags[ $name ] = substr( $text_part, $start ) . '</pre>';
+
+				$text .= substr( $text_part, 0, $start ) . $name;
+				++$i;
+			}
+
+			$text .= $last_part;
+		}
+		// Change multiple <br>'s into two line breaks, which will turn into paragraphs.
+		$text = preg_replace( '|<br\s*/?>\s*<br\s*/?>|', "\n\n", $text );
+
+		$allblocks = '(?:table|thead|tfoot|caption|col|colgroup|tbody|tr|td|th|div|dl|dd|dt|ul|ol|li|pre|form|map|area|blockquote|address|style|p|h[1-6]|hr|fieldset|legend|section|article|aside|hgroup|header|footer|nav|figure|figcaption|details|menu|summary)';
+
+		// Add a double line break above block-level opening tags.
+		$text = preg_replace( '!(<' . $allblocks . '[\s/>])!', "\n\n$1", $text );
+
+		// Add a double line break below block-level closing tags.
+		$text = preg_replace( '!(</' . $allblocks . '>)!', "$1\n\n", $text );
+
+		// Add a double line break after hr tags, which are self closing.
+		$text = preg_replace( '!(<hr\s*?/?>)!', "$1\n\n", $text );
+
+		// Standardize newline characters to "\n".
+		$text = str_replace( array( "\r\n", "\r" ), "\n", $text );
+
+		// Find newlines in all elements and add placeholders.
+		$text = wp_replace_in_html_tags( $text, array( "\n" => ' <!-- wpnl --> ' ) );
+
+		// Collapse line breaks before and after <option> elements so they don't get autop'd.
+		if ( str_contains( $text, '<option' ) ) {
+			$text = preg_replace( '|\s*<option|', '<option', $text );
+			$text = preg_replace( '|</option>\s*|', '</option>', $text );
+		}
+
+		/*
+		 * Collapse line breaks inside <object> elements, before <param> and <embed> elements
+		 * so they don't get autop'd.
+		 */
+		if ( str_contains( $text, '</object>' ) ) {
+			$text = preg_replace( '|(<object[^>]*>)\s*|', '$1', $text );
+			$text = preg_replace( '|\s*</object>|', '</object>', $text );
+			$text = preg_replace( '%\s*(</?(?:param|embed)[^>]*>)\s*%', '$1', $text );
+		}
+
+		/*
+		 * Collapse line breaks inside <audio> and <video> elements,
+		 * before and after <source> and <track> elements.
+		 */
+		if ( str_contains( $text, '<source' ) || str_contains( $text, '<track' ) ) {
+			$text = preg_replace( '%([<\[](?:audio|video)[^>\]]*[>\]])\s*%', '$1', $text );
+			$text = preg_replace( '%\s*([<\[]/(?:audio|video)[>\]])%', '$1', $text );
+			$text = preg_replace( '%\s*(<(?:source|track)[^>]*>)\s*%', '$1', $text );
+		}
+
+		// Collapse line breaks before and after <figcaption> elements.
+		if ( str_contains( $text, '<figcaption' ) ) {
+			$text = preg_replace( '|\s*(<figcaption[^>]*>)|', '$1', $text );
+			$text = preg_replace( '|</figcaption>\s*|', '</figcaption>', $text );
+		}
+
+		// Remove more than two contiguous line breaks.
+		$text = preg_replace( "/\n\n+/", "\n\n", $text );
+
+		// Split up the contents into an array of strings, separated by double line breaks.
+		$paragraphs = preg_split( '/\n\s*\n/', $text, -1, PREG_SPLIT_NO_EMPTY );
+
+		// Reset $text prior to rebuilding.
+		$text = '';
+
+		// Rebuild the content as a string, wrapping every bit with a <p>.
+		foreach ( $paragraphs as $paragraph ) {
+			$text .= '<p>' . trim( $paragraph, "\n" ) . "</p>\n";
+		}
+
+		// Under certain strange conditions it could create a P of entirely whitespace.
+		$text = preg_replace( '|<p>\s*</p>|', '', $text );
+
+		// Add a closing <p> inside <div>, <address>, or <form> tag if missing.
+		$text = preg_replace( '!<p>([^<]+)</(div|address|form)>!', '<p>$1</p></$2>', $text );
+
+		// If an opening or closing block element tag is wrapped in a <p>, unwrap it.
+		$text = preg_replace( '!<p>\s*(</?' . $allblocks . '[^>]*>)\s*</p>!', '$1', $text );
+
+		// In some cases <li> may get wrapped in <p>, fix them.
+		$text = preg_replace( '|<p>(<li.+?)</p>|', '$1', $text );
+
+		// If a <blockquote> is wrapped with a <p>, move it inside the <blockquote>.
+		$text = preg_replace( '|<p><blockquote([^>]*)>|i', '<blockquote$1><p>', $text );
+		$text = str_replace( '</blockquote></p>', '</p></blockquote>', $text );
+
+		// If an opening or closing block element tag is preceded by an opening <p> tag, remove it.
+		$text = preg_replace( '!<p>\s*(</?' . $allblocks . '[^>]*>)!', '$1', $text );
+
+		// If an opening or closing block element tag is followed by a closing <p> tag, remove it.
+		$text = preg_replace( '!(</?' . $allblocks . '[^>]*>)\s*</p>!', '$1', $text );
+
+		// Optionally insert line breaks.
+		if ( $br ) {
+			// Replace newlines that shouldn't be touched with a placeholder.
+			$text = preg_replace_callback( '/<(script|style|svg|math).*?<\/\\1>/s', '_autop_newline_preservation_helper', $text );
+
+			// Normalize <br>
+			$text = str_replace( array( '<br>', '<br/>' ), '<br />', $text );
+
+			// Replace any new line characters that aren't preceded by a <br /> with a <br />.
+			// Post Collection: This is the curical modification.
+			$text = preg_replace( '|(?<!<br />)\s*\n|', ' ', $text );
+
+			// Replace newline placeholders with newlines.
+			$text = str_replace( '<WPPreserveNewline />', "\n", $text );
+		}
+
+		// If a <br /> tag is after an opening or closing block tag, remove it.
+		$text = preg_replace( '!(</?' . $allblocks . '[^>]*>)\s*<br />!', '$1', $text );
+
+		// If a <br /> tag is before a subset of opening or closing block tags, remove it.
+		$text = preg_replace( '!<br />(\s*</?(?:p|li|div|dl|dd|dt|th|pre|td|ul|ol)[^>]*>)!', '$1', $text );
+		$text = preg_replace( "|\n</p>$|", '</p>', $text );
+
+		// Replace placeholder <pre> tags with their original content.
+		if ( ! empty( $pre_tags ) ) {
+			$text = str_replace( array_keys( $pre_tags ), array_values( $pre_tags ), $text );
+		}
+
+		// Restore newlines in all elements.
+		if ( str_contains( $text, '<!-- wpnl -->' ) ) {
+			$text = str_replace( array( ' <!-- wpnl --> ', '<!-- wpnl -->' ), "\n", $text );
+		}
+
+		return $text;
+	}
+
 	/**
 	 * Overwrite the role name for a post collection user.
 	 *
@@ -959,6 +1184,56 @@ class Post_Collection {
 	public function associate_friend_user_role( $roles ) {
 		$roles[] = 'post_collection';
 		return $roles;
+	}
+
+	public function friends_search_autocomplete( $results, $q ) {
+		if ( Friends::check_url( $q ) ) {
+			foreach ( $this->get_post_collection_users()->get_results() as $user ) {
+				if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
+					continue;
+				}
+
+				$result = '<a href="' . esc_url(
+					add_query_arg(
+						array(
+							'collect-post' => $q,
+							'user'         => $user->ID,
+						),
+						home_url()
+					)
+				) . '" class="has-icon-left">';
+				$result .= '<span class="ab-icon dashicons dashicons-download"></span>';
+				$result .= 'Save ';
+				$result .= ' <small>';
+				$result .= esc_html( Friends::url_truncate( $q ) );
+				$result .= '</small> to ';
+				$result .= esc_html( $user->display_name );
+				$result .= '</a>';
+				$results[] = $result;
+			}
+		}
+		return $results;
+	}
+
+	public function friends_browser_extension_rest_info( $info ) {
+		$post_collections = array();
+		foreach ( $this->get_post_collection_users()->get_results() as $user ) {
+			if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
+				continue;
+			}
+			$post_collections[] = array(
+				'id'   => $user->ID,
+				'name' => $user->display_name,
+				'url'  => $user->get_local_friends_page_url(),
+
+			);
+
+		}
+		if ( ! empty( $post_collections ) ) {
+			$info['post_collections'] = $post_collections;
+		}
+
+		return $info;
 	}
 
 	/**
@@ -999,7 +1274,7 @@ class Post_Collection {
 	 */
 	function friends_friend_feed_viewable( $viewable, $author_login ) {
 		$author = get_user_by( 'login', $author_login );
-		if ( get_user_option( 'friends_publish_post_collection', $author->ID ) && $author->has_cap( 'post_collection' ) ) {
+		if ( $author && ! is_wp_error( $author ) && get_user_option( 'friends_publish_post_collection', $author->ID ) && $author->has_cap( 'post_collection' ) ) {
 			add_filter( 'pre_option_rss_use_excerpt', '__return_true', 30 );
 			return true;
 		}
@@ -1057,6 +1332,18 @@ class Post_Collection {
 		);
 	}
 
+	public function enter_url_field( $user ) {
+		if ( $user->has_cap( 'post_collection' ) ) {
+			$this->template_loader()->get_template_part(
+				'frontend/enter-url',
+				null,
+				array(
+					'friend_user' => $user,
+				)
+			);
+		}
+	}
+
 	public function feed_table_header() {
 		?>
 		<th><?php esc_html_e( 'Fetch Full Content', 'friends' ); ?></th>
@@ -1069,6 +1356,18 @@ class Post_Collection {
 		}
 		?>
 		<td style="padding-left: 1em"><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
+		<?php
+	}
+
+	public function feed_list_item( $feed, $term_id ) {
+		if ( ! $feed ) {
+			return;
+		}
+		?>
+		<tr>
+			<th><?php esc_html_e( 'Fetch Full Content', 'friends' ); ?></th>
+			<td><input type="checkbox" name="feeds[<?php echo esc_attr( $term_id ); ?>][fetch-full-content]" value="1" aria-label="<?php esc_attr_e( 'Fetch Full Content', 'friends' ); ?>" <?php checked( $feed->get_metadata( 'fetch-full-content' ) ); ?> /></td>
+		</tr>
 		<?php
 	}
 
@@ -1182,35 +1481,40 @@ class Post_Collection {
 			wp_send_json_error( 'error' );
 		}
 
-		$user = new User( $_POST['author'] );
-		if ( is_wp_error( $user ) ) {
+		$new_author = new User( $_POST['author'] );
+		if ( is_wp_error( $new_author ) ) {
 			wp_send_json_error( 'error' );
 		}
-		if ( ! User::is_friends_plugin_user( $user ) && ! $user->has_cap( 'post_collection' ) ) {
+		if ( ! User::is_friends_plugin_user( $new_author ) && ! $new_author->has_cap( 'post_collection' ) ) {
 			wp_send_json_error( 'error' );
 		}
 
-		$first = new User( $_POST['first'] );
+		$originalauthor = User::get_user_by_id( $_POST['originalauthor'] );
 		$new_text = __( 'Undo' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 
 		$post = get_post( $_POST['id'] );
-		$old_author = $post->post_author;
-		$post->post_author = $user->ID;
-		if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
+
+		$old_author = User::get_post_author( $post );
+
+		$post->post_author = $new_author->ID;
+		if ( get_user_option( 'friends_post_collection_copy_mode', $new_author->ID ) ) {
 			unset( $post->ID );
-			$user->insert_post( (array) $post );
+			$new_author->insert_post( (array) $post );
 			$new_text = sprintf(
 				// translators: %s is the name of a post collection.
 				__( 'Copied to %s!', 'post-collection', 'friends' ),
-				$user->display_name
+				$new_author->display_name
 			);
 		} else {
-			$user->insert_post( (array) $post );
-			if ( intval( $old_author ) !== $first->ID ) {
+			$new_author->insert_post( (array) $post );
+			if ( $old_author instanceof Subscription ) {
+				wp_remove_object_terms( $post->ID, $old_author->get_term_id(), Subscription::TAXONOMY );
+			}
+			if ( $new_author->ID !== $originalauthor->ID ) {
 				$new_text = sprintf(
 					// translators: %s is the name of a post collection.
-					_x( 'Move to %s', 'post-collection', 'friends' ),
-					$first->display_name
+					_x( 'Moved to %s!', 'post-collection', 'friends' ),
+					$new_author->display_name
 				);
 			}
 		}
@@ -1218,7 +1522,7 @@ class Post_Collection {
 		wp_send_json_success(
 			array(
 				'new_text'   => $new_text,
-				'old_author' => $old_author,
+				'old_author' => $old_author->ID,
 			)
 		);
 	}
@@ -1241,6 +1545,20 @@ class Post_Collection {
 		}
 
 		$url = get_permalink( $post );
+		$href = null;
+
+		// Check if the post content contains as "read more" link.
+		$parser = new \WP_HTML_Tag_Processor( $post->post_content );
+		while ( $parser->next_tag( 'a' ) ) {
+			$href = $parser->get_attribute( 'href' );
+			$parser->next_token();
+			if ( 'read more' === strtolower( trim( $parser->get_modifiable_text() ) ) ) {
+				$url = $href;
+				break;
+			}
+			$href = null;
+		}
+
 		$item = $this->download( $url );
 		if ( is_wp_error( $item ) ) {
 			wp_send_json_error( $item );
@@ -1255,6 +1573,11 @@ class Post_Collection {
 		$title   = strip_tags( trim( $item->title ) );
 		$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
 
+		if ( $href ) {
+			// The permalink is not the same as the original URL, so we add it to the content.
+			$content = 'Source: <a href="' . esc_url( $href ) . '">' . esc_html( $href ) . "</a><br>\n<br>\n" . $content;
+		}
+
 		$post_data = array(
 			'ID'           => $post->ID,
 			'post_title'   => $title,
@@ -1268,6 +1591,7 @@ class Post_Collection {
 
 		wp_send_json_success(
 			array(
+				'url'         => $url,
 				'post_title'   => $title,
 				'post_content' => $content,
 			)
@@ -1412,7 +1736,9 @@ class Post_Collection {
 		$capabilities = array();
 
 		$capabilities['post_collection'] = array(
-			'post_collection' => true,
+			'post_collection'      => true,
+			'edit_posts'           => true,
+			'edit_post_collection' => true,
 		);
 
 		// All roles belonging to this plugin have the friends_plugin capability.
@@ -1435,7 +1761,7 @@ class Post_Collection {
 			'post_collection' => _x( 'Post Collection', 'User role', 'friends' ),
 		);
 
-		$roles = new \WP_Roles;
+		$roles = new \WP_Roles();
 
 		foreach ( $default_roles as $type => $name ) {
 			$role = false;
@@ -1468,7 +1794,7 @@ class Post_Collection {
 		}
 		if ( ! $default_user ) {
 			$userdata  = array(
-				'user_login'   => sanitize_user( sanitize_title_with_dashes( __( 'Collected Posts', 'friends' ) ) ),
+				'user_login'   => sanitize_user( sanitize_title_with_dashes( remove_accents( __( 'Collected Posts', 'friends' ) ) ) ),
 				'display_name' => __( 'Collected Posts', 'friends' ),
 				'user_pass'    => wp_generate_password( 256 ),
 				'role'         => 'post_collection',
@@ -1484,6 +1810,5 @@ class Post_Collection {
 	public static function setup() {
 		self::setup_roles();
 		self::setup_default_user();
-
 	}
 }

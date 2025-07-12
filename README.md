@@ -15,6 +15,20 @@ This plugin provides the facilities to store feed items in a separate post type.
 
 ## Changelog
 
+### 1.2.5
+- Prevent double submission from the browser extension
+
+### 1.2.4
+- Update Share button to the new Friends styling
+
+### 1.2.3
+- Supply post collections to the Friends browser extension
+- Add site configs to allow storing Youtube videos
+
+### 1.2.2
+- Switch the readability library to https://github.com/fivefilters/readability.php
+- Prevent wpautop to insert newlines where undesired
+
 ### 1.2.1
 - Fix UTF-8 problems with downloading external images
 
