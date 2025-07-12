@@ -8,6 +8,7 @@
  */
 
 namespace Friends;
+use WP_HTML_Tag_Processor;
 
 /**
  * This is the class for the downloading and storing posts for the Friends Plugin.
@@ -1548,7 +1549,7 @@ class Post_Collection {
 		$href = null;
 
 		// Check if the post content contains as "read more" link.
-		$parser = new \WP_HTML_Tag_Processor( $post->post_content );
+		$parser = new WP_HTML_Tag_Processor( $post->post_content );
 		while ( $parser->next_tag( 'a' ) ) {
 			$href = $parser->get_attribute( 'href' );
 			$parser->next_token();
