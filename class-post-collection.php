@@ -1616,13 +1616,14 @@ class Post_Collection {
 			exit;
 		}
 
-		$dom = new \DOMDocument();
-		$dom->loadHTML( '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' . $post->post_content );
-
 		$home_host = wp_parse_url( home_url(), PHP_URL_HOST );
 
-		foreach ( $dom->getElementsByTagName( 'img' ) as $img ) {
-			$src = $img->getAttribute( 'src' );
+		$processor = new WP_HTML_Tag_Processor( $post->post_content );
+		while ( $processor->next_tag( 'IMG' ) ) {
+			$src = $processor->get_attribute( 'src' );
+			if ( ! is_string( $src ) ) {
+				$src = '';
+			}
 			$p = wp_parse_url( $src );
 			if ( $p['host'] === $home_host ) {
 				continue;
@@ -1649,18 +1650,18 @@ class Post_Collection {
 			}
 
 			$new_src = wp_get_attachment_url( $attachment_id );
-			$img->setAttribute( 'src', $new_src );
+			$processor->set_attribute( 'src', $new_src );
 
-			if ( $img->hasAttribute( 'srcset' ) ) {
-				$old_srcset = $img->getAttribute( 'srcset' );
+			$old_srcset = $processor->get_attribute( 'srcset' );
+			if ( is_string( $old_srcset ) ) {
 				$new_srcset = str_replace( $src, $new_src, $old_srcset );
-				$img->setAttribute( 'srcset', $new_srcset );
+				$processor->set_attribute( 'srcset', $new_srcset );
 			}
 		}
 
 		$post_data = array(
 			'ID'           => $post->ID,
-			'post_content' => force_balance_tags( wp_kses_post( $dom->saveHTML() ) ),
+			'post_content' => force_balance_tags( wp_kses_post( $processor->get_updated_html() ) ),
 			'meta_input'   => array(
 				'images-downloaded' => true,
 			),
