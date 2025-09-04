@@ -51,11 +51,89 @@ class Post_Collection {
 	/**
 	 * Constructor
 	 *
-	 * @param Friends $friends A reference to the Friends object.
+	 * @param Friends $friends A reference to the Friends object (optional).
 	 */
-	public function __construct( Friends $friends ) {
+	public function __construct( Friends $friends = null ) {
 		$this->friends = $friends;
 		$this->register_hooks();
+	}
+
+	/**
+	 * Get the tag taxonomy to use for post collections.
+	 *
+	 * @return string The taxonomy name.
+	 */
+	public function get_tag_taxonomy() {
+		if ( $this->friends ) {
+			return Friends::TAG_TAXONOMY;
+		}
+		return 'friend_tag';
+	}
+
+	/**
+	 * Get the required role capability for Friends functionality.
+	 *
+	 * @return string The capability name.
+	 */
+	public function get_required_role() {
+		if ( $this->friends ) {
+			return Friends::REQUIRED_ROLE;
+		}
+		return 'edit_private_posts';
+	}
+
+	/**
+	 * Get the Friends version or fallback.
+	 *
+	 * @return string The version string.
+	 */
+	public function get_friends_version() {
+		if ( $this->friends ) {
+			return Friends::VERSION;
+		}
+		return '1.0';
+	}
+
+	/**
+	 * Check if we're on the Friends frontend.
+	 *
+	 * @return bool True if on Friends frontend.
+	 */
+	public function is_on_friends_frontend() {
+		if ( $this->friends ) {
+			return Friends::on_frontend();
+		}
+		return false;
+	}
+
+	/**
+	 * Check if a URL is valid using Friends method if available.
+	 *
+	 * @param string $url The URL to check.
+	 * @return bool True if URL is valid.
+	 */
+	public function check_url( $url ) {
+		if ( $this->friends ) {
+			return Friends::check_url( $url );
+		}
+		return filter_var( $url, FILTER_VALIDATE_URL ) !== false;
+	}
+
+	/**
+	 * Truncate URL using Friends method if available.
+	 *
+	 * @param string $url The URL to truncate.
+	 * @return string The truncated URL.
+	 */
+	public function url_truncate( $url ) {
+		if ( $this->friends ) {
+			return Friends::url_truncate( $url );
+		}
+		// Simple fallback truncation
+		if ( strlen( $url ) > 50 ) {
+			return substr( $url, 0, 47 ) . '...';
+		}
+		return $url;
 	}
 
 	/**
@@ -126,14 +204,14 @@ class Post_Collection {
 			'show_in_menu'        => apply_filters( 'friends_show_cached_posts', false ),
 			'show_in_nav_menus'   => false,
 			'show_in_admin_bar'   => false,
-			'show_in_rest'        => current_user_can( Friends::REQUIRED_ROLE ),
+			'show_in_rest'        => current_user_can( $this->get_required_role() ),
 			'exclude_from_search' => true,
 			'public'              => true,
 			'delete_with_user'    => true,
 			'menu_position'       => 5,
 			'menu_icon'           => 'dashicons-pressthis',
 			'supports'            => array( 'title', 'editor', 'author', 'revisions', 'thumbnail', 'excerpt', 'comments', 'post-formats' ),
-			'taxonomies'          => array( 'post_tag', 'post_format' ),
+			'taxonomies'          => array( $this->get_tag_taxonomy(), 'post_format' ),
 			'has_archive'         => true,
 		);
 
@@ -312,7 +390,7 @@ class Post_Collection {
 	 * Process access for the Friends Edit User page
 	 */
 	private function check_edit_post_collection() {
-		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to edit this user.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
@@ -425,7 +503,7 @@ class Post_Collection {
 	 * Process access for the Friends create User page
 	 */
 	private function check_create_post_collection() {
-		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to create this user.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 		}
 
@@ -529,7 +607,7 @@ class Post_Collection {
 			return;
 		}
 
-		if ( is_user_logged_in() && Friends::on_frontend() ) {
+		if ( is_user_logged_in() && $this->is_on_friends_frontend() ) {
 			wp_enqueue_script( 'send-to-e-reader', plugins_url( 'friends-post-collection.js', __FILE__ ), array( 'friends' ), 1.0 );
 		}
 	}
@@ -538,7 +616,11 @@ class Post_Collection {
 		// Only show the menu if installed standalone.
 		$friends_settings_exist = '' !== menu_page_url( 'friends', false );
 		if ( $friends_settings_exist ) {
-			$menu_title = __( 'Friends', 'friends' ) . $this->friends->admin->get_unread_badge();
+			$unread_badge = '';
+			if ( $this->friends && $this->friends->admin ) {
+				$unread_badge = $this->friends->admin->get_unread_badge();
+			}
+			$menu_title = __( 'Friends', 'friends' ) . $unread_badge;
 			$page_type = sanitize_title( $menu_title );
 
 			add_submenu_page(
@@ -566,12 +648,12 @@ class Post_Collection {
 		}
 
 		if ( isset( $_GET['page'] ) && 'create-post-collection' === $_GET['page'] ) {
-			add_submenu_page( 'friends', __( 'Create Post Collection', 'friends' ), __( 'Create Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'create-post-collection', array( $this, 'render_create_post_collection' ) );
+			add_submenu_page( 'friends', __( 'Create Post Collection', 'friends' ), __( 'Create Post Collection', 'friends' ), $this->get_required_role(), 'create-post-collection', array( $this, 'render_create_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_create-post-collection', array( $this, 'process_create_post_collection' ) );
 		}
 
 		if ( isset( $_GET['page'] ) && 'edit-post-collection' === $_GET['page'] ) {
-			add_submenu_page( 'friends', __( 'Edit Post Collection', 'friends' ), __( 'Edit Post Collection', 'friends' ), Friends::REQUIRED_ROLE, 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
+			add_submenu_page( 'friends', __( 'Edit Post Collection', 'friends' ), __( 'Edit Post Collection', 'friends' ), $this->get_required_role(), 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
 			add_action( 'load-' . $page_type . '_page_edit-post-collection', array( $this, 'process_edit_post_collection' ) );
 		}
 	}
@@ -583,7 +665,7 @@ class Post_Collection {
 	 * @param  \WP_Admin_Bar $wp_menu The admin bar to modify.
 	 */
 	public function admin_bar_new_content( \WP_Admin_Bar $wp_menu ) {
-		if ( current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( current_user_can( $this->get_required_role() ) ) {
 			$wp_menu->add_menu(
 				array(
 					'id'     => 'new-post-collection',
@@ -603,7 +685,7 @@ class Post_Collection {
 	 */
 	public function user_row_actions( array $actions, \WP_User $user ) {
 		if (
-			! current_user_can( Friends::REQUIRED_ROLE ) ||
+			! current_user_can( $this->get_required_role() ) ||
 			(
 				! $user->has_cap( 'post_collection' )
 			)
@@ -758,7 +840,7 @@ class Post_Collection {
 		}
 		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && isset( $_REQUEST['post-only'] ) ) {
 			$friend_user = new User( intval( $_REQUEST['user'] ) );
-			$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
+			$post_id = $this->friends ? $this->friends->feed->url_to_postid( $url, $friend_user->ID ) : null;
 			if ( ! $post_id ) {
 				$_REQUEST['post-only'] += 1;
 				if ( $_REQUEST['post-only'] <= 3 ) {
@@ -779,7 +861,7 @@ class Post_Collection {
 			update_user_option( $_REQUEST['user'], 'friends-post-collection_last_save', $url . $delimiter . $body );
 		}
 
-		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
 			auth_redirect();
 		}
 
@@ -803,11 +885,11 @@ class Post_Collection {
 	 * @return \WP_Error    Potentially an error message.
 	 */
 	public function save_url( $url, User $friend_user, $content = null ) {
-		if ( ! is_string( $url ) || ! Friends::check_url( $url ) ) {
+		if ( ! is_string( $url ) || ! $this->check_url( $url ) ) {
 			return new \WP_Error( 'invalid-url', __( 'You entered an invalid URL.', 'friends' ) );
 		}
 
-		$post_id = Friends::get_instance()->feed->url_to_postid( $url, $friend_user->ID );
+		$post_id = $this->friends ? $this->friends->feed->url_to_postid( $url, $friend_user->ID ) : null;
 		if ( is_null( $post_id ) ) {
 			$item = $this->download( $url, $content );
 			$post_data = array(
@@ -874,7 +956,7 @@ class Post_Collection {
 			'timeout'     => 20,
 			'redirection' => 5,
 			'headers'     => array(
-				'user-agent' => 'WordPress/' . $wp_version . '; ' . home_url( '/' ) . '; Friends/' . Friends::VERSION,
+				'user-agent' => 'WordPress/' . $wp_version . '; ' . home_url( '/' ) . '; Friends/' . $this->get_friends_version(),
 			),
 		);
 
@@ -1188,7 +1270,7 @@ class Post_Collection {
 	}
 
 	public function friends_search_autocomplete( $results, $q ) {
-		if ( Friends::check_url( $q ) ) {
+		if ( $this->check_url( $q ) ) {
 			foreach ( $this->get_post_collection_users()->get_results() as $user ) {
 				if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
 					continue;
@@ -1206,7 +1288,7 @@ class Post_Collection {
 				$result .= '<span class="ab-icon dashicons dashicons-download"></span>';
 				$result .= 'Save ';
 				$result .= ' <small>';
-				$result .= esc_html( Friends::url_truncate( $q ) );
+				$result .= esc_html( $this->url_truncate( $q ) );
 				$result .= '</small> to ';
 				$result .= esc_html( $user->display_name );
 				$result .= '</a>';
@@ -1446,7 +1528,7 @@ class Post_Collection {
 	}
 
 	function wp_ajax_mark_private() {
-		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
 			wp_send_json_error( 'error' );
 		}
 
@@ -1462,7 +1544,7 @@ class Post_Collection {
 	}
 
 	function wp_ajax_mark_publish() {
-		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
 			wp_send_json_error( 'error' );
 		}
 
@@ -1478,7 +1560,7 @@ class Post_Collection {
 	}
 
 	function wp_ajax_change_author() {
-		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
 			wp_send_json_error( 'error' );
 		}
 
@@ -1529,7 +1611,7 @@ class Post_Collection {
 	}
 
 	function wp_ajax_fetch_full_content() {
-		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
 			wp_send_json_error( __( 'Sorry, you are not allowed to do that' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 			exit;
 		}
@@ -1600,7 +1682,7 @@ class Post_Collection {
 	}
 
 	function wp_ajax_download_images() {
-		if ( ! current_user_can( Friends::REQUIRED_ROLE ) ) {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
 			wp_send_json_error( __( 'Sorry, you are not allowed to do that' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 			exit;
 		}
@@ -1806,10 +1888,79 @@ class Post_Collection {
 	}
 
 	/**
+	 * Get the tag taxonomy for static contexts (migration, etc).
+	 *
+	 * @return string The taxonomy name.
+	 */
+	private static function get_tag_taxonomy_static() {
+		if ( class_exists( 'Friends\Friends' ) ) {
+			return Friends::TAG_TAXONOMY;
+		}
+		return 'friend_tag';
+	}
+
+	/**
+	 * Migrate post_tag taxonomy to friend_tag for post_collection posts.
+	 */
+	private static function migrate_post_tags() {
+		// Check if migration has already been run
+		if ( get_option( 'friends_post_collection_migrated_tags', false ) ) {
+			return;
+		}
+
+		$target_taxonomy = self::get_tag_taxonomy_static();
+		
+		// Check if the target taxonomy exists, if not defer migration
+		if ( ! taxonomy_exists( $target_taxonomy ) ) {
+			// Schedule migration to run later when taxonomy is available
+			add_action( 'init', array( __CLASS__, 'migrate_post_tags' ), 99 );
+			return;
+		}
+
+		global $wpdb;
+
+		// Get all post_collection posts that have post_tag terms
+		$query = $wpdb->prepare(
+			"SELECT DISTINCT p.ID 
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->term_relationships} tr ON p.ID = tr.object_id
+			INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+			WHERE p.post_type = %s AND tt.taxonomy = 'post_tag'",
+			self::CPT
+		);
+
+		$post_ids = $wpdb->get_col( $query );
+
+		if ( empty( $post_ids ) ) {
+			// No posts to migrate, mark as complete
+			update_option( 'friends_post_collection_migrated_tags', true );
+			return;
+		}
+
+		// For each post, migrate post_tag terms to friend_tag
+		foreach ( $post_ids as $post_id ) {
+			// Get current post_tag terms
+			$post_tags = wp_get_post_terms( $post_id, 'post_tag', array( 'fields' => 'slugs' ) );
+			
+			if ( ! empty( $post_tags ) && ! is_wp_error( $post_tags ) ) {
+				// Set the same terms in friend_tag taxonomy
+				wp_set_post_terms( $post_id, $post_tags, $target_taxonomy, false );
+				
+				// Remove the old post_tag terms
+				wp_set_post_terms( $post_id, array(), 'post_tag', false );
+			}
+		}
+
+		// Mark migration as complete
+		update_option( 'friends_post_collection_migrated_tags', true );
+	}
+
+	/**
 	 * Actions to take upon plugin activation.
 	 */
 	public static function setup() {
 		self::setup_roles();
 		self::setup_default_user();
+		self::migrate_post_tags();
 	}
 }
