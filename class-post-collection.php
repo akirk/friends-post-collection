@@ -51,9 +51,9 @@ class Post_Collection {
 	/**
 	 * Constructor
 	 *
-	 * @param Friends $friends A reference to the Friends object (optional).
+	 * @param Friends|null $friends A reference to the Friends object (optional).
 	 */
-	public function __construct( Friends $friends = null ) {
+	public function __construct( ?Friends $friends = null ) {
 		$this->friends = $friends;
 		$this->register_hooks();
 	}

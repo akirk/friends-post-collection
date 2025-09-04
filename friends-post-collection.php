@@ -42,8 +42,8 @@ function load_friends_post_collection( $friends = null ) {
 	$post_collection->register_site_config( new PostCollection\SiteConfig\Youtube() );
 }
 
-add_action( 'friends_loaded', 'load_friends_post_collection' );
-add_action( 'init', 'load_friends_post_collection' );
+add_action( 'friends_loaded', 'Friends\load_friends_post_collection' );
+add_action( 'init', 'Friends\load_friends_post_collection' );
 
 register_activation_hook( __FILE__, array( __NAMESPACE__ . '\Post_Collection', 'activate_plugin' ) );
 add_action( 'activate_blog', array( __NAMESPACE__ . '\Post_Collection', 'activate_plugin' ) );
