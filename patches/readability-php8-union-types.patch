@@ -1,0 +1,37 @@
+--- a/src/Nodes/DOM/DOMNodeList.php
++++ b/src/Nodes/DOM/DOMNodeList.php
+@@ -40,11 +40,9 @@ class DOMNodeList extends \DOMNodeList implements \Countable
+     }
+
+     /**
+-     * @param DOMNode|DOMElement|DOMComment $node
+-     *
+-     * @return DOMNodeList
++     * Add node to the list.
+      */
+-    public function add($node)
++    public function add(DOMNode|DOMElement|DOMText|DOMComment|DOMProcessingInstruction $node): DOMNodeList
+     {
+         $this->items[] = $node;
+         $this->length++;
+@@ -53,17 +51,15 @@ class DOMNodeList extends \DOMNodeList implements \Countable
+     }
+
+     /**
+-     * @param int $offset
+-     *
+-     * @return DOMNode|DOMElement|DOMComment
++     * Get node.
+      */
+-    public function item(int $offset)
++    public function item(int $offset): DOMNode|DOMElement|DOMText|DOMComment|DOMProcessingInstruction
+     {
+         return $this->items[$offset];
+     }
+
+     /**
+-     * @return int|void
++     * Number of items.
+      */
+     public function count(): int
+     {

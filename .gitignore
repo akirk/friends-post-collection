@@ -1,17 +1,16 @@
-vendor/andreskrey/readability.php/.coveralls.yml
-vendor/andreskrey/readability.php/.gitattributes
-vendor/andreskrey/readability.php/.gitignore
-vendor/andreskrey/readability.php/.styleci.yml
-vendor/andreskrey/readability.php/.travis.yml
-vendor/andreskrey/readability.php/AUTHORS.md
-vendor/andreskrey/readability.php/CHANGELOG.md
-vendor/andreskrey/readability.php/CONTRIBUTING.md
-vendor/andreskrey/readability.php/LICENSE
-vendor/andreskrey/readability.php/Makefile
-vendor/andreskrey/readability.php/README.md
-vendor/andreskrey/readability.php/composer.json
-vendor/andreskrey/readability.php/docker-compose.yml
-vendor/andreskrey/readability.php/docker
-vendor/andreskrey/readability.php/phpunit.xml
-vendor/andreskrey/readability.php/test
-vendor/ozh
+# Composer dependencies
+/vendor/
+/composer.lock
+
+# Composer patches
+/patches.lock.json
+
+# PHPUnit
+/.phpunit.result.cache
+
+# IDE
+/.vscode/
+.DS_Store
+
+# Backup directories
+/vendor.backup/

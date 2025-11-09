@@ -1007,6 +1007,7 @@ class Post_Collection {
 			$item->author = $readability->getAuthor();
 
 			$item->content = str_replace( '&#xD;', '', $item->content );
+			$item->content = $this->remove_artificial_line_breaks( $item->content );
 		} catch ( \andreskrey\Readability\ParseException $e ) {
 			return new \WP_Error(
 				'could-not-extract-content',
@@ -1020,6 +1021,141 @@ class Post_Collection {
 		}
 
 		return $item;
+	}
+
+	public function remove_artificial_line_breaks( $html ) {
+		preg_match_all( '/<p[^>]*>(.*?)<\/p>/is', $html, $matches, PREG_SET_ORDER );
+
+		foreach ( $matches as $match ) {
+			$original = $match[0];
+			$inner_html = $match[1];
+
+			$cleaned = $this->remove_artificial_brs_from_paragraph( $inner_html );
+
+			if ( $cleaned !== $inner_html ) {
+				$replacement = str_replace( $inner_html, $cleaned, $original );
+				$html = str_replace( $original, $replacement, $html );
+			}
+		}
+
+		preg_match_all( '/<li[^>]*>(.*?)<\/li>/is', $html, $matches, PREG_SET_ORDER );
+
+		foreach ( $matches as $match ) {
+			$original = $match[0];
+			$inner_html = $match[1];
+
+			$cleaned = $this->remove_artificial_brs_from_paragraph( $inner_html );
+
+			if ( $cleaned !== $inner_html ) {
+				$replacement = str_replace( $inner_html, $cleaned, $original );
+				$html = str_replace( $original, $replacement, $html );
+			}
+		}
+
+		return $html;
+	}
+
+	private function remove_artificial_brs_from_paragraph( $text ) {
+		$br_positions = array();
+		$offset = 0;
+
+		while ( false !== ( $pos = stripos( $text, '<br', $offset ) ) ) {
+			$end = strpos( $text, '>', $pos );
+			if ( false === $end ) {
+				break;
+			}
+
+			$br_tag = substr( $text, $pos, $end - $pos + 1 );
+			$br_positions[] = array(
+				'pos'   => $pos,
+				'end'   => $end + 1,
+				'tag'   => $br_tag,
+				'after' => substr( $text, $end + 1, 1 ),
+			);
+
+			$offset = $end + 1;
+		}
+
+		if ( empty( $br_positions ) ) {
+			return $text;
+		}
+
+		if ( count( $br_positions ) < 2 ) {
+			return $text;
+		}
+
+		$text_between_brs = array();
+		for ( $i = 0; $i < count( $br_positions ) - 1; $i++ ) {
+			$start = $br_positions[ $i ]['end'];
+			$end = $br_positions[ $i + 1 ]['pos'];
+			$between = substr( $text, $start, $end - $start );
+
+			$text_between_brs[] = array(
+				'text'   => $between,
+				'length' => strlen( strip_tags( $between ) ),
+			);
+		}
+
+		$lengths = array_column( $text_between_brs, 'length' );
+		$lengths = array_filter( $lengths, function( $len ) {
+			return $len > 0;
+		} );
+
+		if ( empty( $lengths ) ) {
+			return $text;
+		}
+
+		$avg_length = array_sum( $lengths ) / count( $lengths );
+		$stddev = 0;
+		if ( count( $lengths ) > 1 ) {
+			$variance = 0;
+			foreach ( $lengths as $len ) {
+				$variance += pow( $len - $avg_length, 2 );
+			}
+			$stddev = sqrt( $variance / count( $lengths ) );
+		}
+
+		$coefficient_of_variation = $avg_length > 0 ? $stddev / $avg_length : 1;
+
+		if ( $coefficient_of_variation > 0.3 ) {
+			return $text;
+		}
+
+		$brs_to_remove = array();
+		foreach ( $br_positions as $i => $br ) {
+			$before = substr( $text, 0, $br['pos'] );
+			$after = substr( $text, $br['end'] );
+
+			$before_trimmed = rtrim( $before );
+			$after_trimmed = ltrim( $after );
+
+			if ( empty( $before_trimmed ) || empty( $after_trimmed ) ) {
+				continue;
+			}
+
+			$last_char = substr( $before_trimmed, -1 );
+			if ( in_array( $last_char, array( '.', '!', '?', ':', ';' ) ) ) {
+				continue;
+			}
+
+			if ( preg_match( '/<\/[^>]+>$/', $before_trimmed ) ) {
+				continue;
+			}
+
+			if ( preg_match( '/^<[^>]+>/', $after_trimmed ) && ! preg_match( '/^<(em|strong|i|b|a|code|span)[\s>]/i', $after_trimmed ) ) {
+				continue;
+			}
+
+			$brs_to_remove[] = $br;
+		}
+
+		foreach ( array_reverse( $brs_to_remove ) as $br ) {
+			$text = substr_replace( $text, ' ', $br['pos'], $br['end'] - $br['pos'] );
+		}
+
+		$text = preg_replace( '/\s+/', ' ', $text );
+
+		return $text;
 	}
 
 	/**

@@ -1,0 +1,60 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+
+      - name: Install production dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Create release directory
+        run: |
+          mkdir -p release
+          rsync -av --exclude='.git' \
+                   --exclude='.github' \
+                   --exclude='node_modules' \
+                   --exclude='tests' \
+                   --exclude='.gitignore' \
+                   --exclude='.phpunit.result.cache' \
+                   --exclude='phpunit.xml' \
+                   --exclude='phpcs.xml' \
+                   --exclude='composer.lock' \
+                   --exclude='patches.lock.json' \
+                   --exclude='vendor.backup' \
+                   --exclude='.vscode' \
+                   --exclude='sftp-config.json' \
+                   --exclude='.DS_Store' \
+                   --exclude='release' \
+                   ./ release/friends-post-collection/
+
+      - name: Create ZIP archive
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          cd release
+          zip -r "friends-post-collection-${TAG_NAME}.zip" friends-post-collection/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        with:
+          files: release/friends-post-collection-${{ env.TAG_NAME }}.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

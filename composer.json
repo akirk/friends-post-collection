@@ -3,6 +3,29 @@
         "andreskrey/readability.php": "^2.1"
     },
     "require-dev": {
-        "ozh/log": "^1.0"
+        "ozh/log": "^1.0",
+        "phpunit/phpunit": "^9.0",
+        "cweagans/composer-patches": "^2.0"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "autoload-dev": {
+        "classmap": [
+            "tests/"
+        ]
+    },
+    "config": {
+        "allow-plugins": {
+            "cweagans/composer-patches": true
+        }
+    },
+    "extra": {
+        "patches": {
+            "andreskrey/readability.php": {
+                "Handle missing body element if an html element exists": "patches/readability-missing-body.patch",
+                "Use PHP 8+ union types in DOMNodeList": "patches/readability-php8-union-types.patch"
+            }
+        }
     }
 }
