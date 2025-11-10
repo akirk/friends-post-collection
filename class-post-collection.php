@@ -19,7 +19,7 @@ use WP_HTML_Tag_Processor;
  * @author Alex Kirk
  */
 class Post_Collection {
-	const CPT = 'post_collection';
+	const CPT = 'friend_post_cache';
 	/**
 	 * Whether to cache the retrieved users
 	 *
@@ -140,8 +140,6 @@ class Post_Collection {
 	 * Register the WordPress hooks
 	 */
 	private function register_hooks() {
-		add_action( 'init', array( $this, 'register_custom_post_type' ) );
-		add_filter( 'friends_frontend_post_types', array( $this, 'friends_frontend_post_types' ) );
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
@@ -176,60 +174,8 @@ class Post_Collection {
 		add_filter( 'friends_browser_extension_rest_info', array( $this, 'friends_browser_extension_rest_info' ) );
 	}
 
-	/**
-	 * Registers the custom post type
-	 */
-	public function register_custom_post_type() {
-		$labels = array(
-			'name'               => __( 'Collected Posts', 'friends' ),
-			'singular_name'      => __( 'Collected Post', 'friends' ),
-			'add_new'            => _x( 'Add New', 'collected post', 'friends' ),
-			'add_new_item'       => __( 'Add New Collected Post', 'friends' ),
-			'edit_item'          => __( 'Edit Collected Post', 'friends' ),
-			'new_item'           => __( 'New Collected Post', 'friends' ),
-			'all_items'          => __( 'All Collected Posts', 'friends' ),
-			'view_item'          => __( 'View Collected Post', 'friends' ),
-			'search_items'       => __( 'Search Collected Posts', 'friends' ),
-			'not_found'          => __( 'No Collected Posts found', 'friends' ),
-			'not_found_in_trash' => __( 'No Collected Posts found in the Trash', 'friends' ),
-			'parent_item_colon'  => '',
-			'menu_name'          => __( 'Collected Posts', 'friends' ),
-		);
-
-		$args = array(
-			'labels'              => $labels,
-			'description'         => __( 'A collected post', 'friends' ),
-			'publicly_queryable'  => true,
-			'show_ui'             => true,
-			'show_in_menu'        => apply_filters( 'friends_show_cached_posts', false ),
-			'show_in_nav_menus'   => false,
-			'show_in_admin_bar'   => false,
-			'show_in_rest'        => current_user_can( $this->get_required_role() ),
-			'exclude_from_search' => true,
-			'public'              => true,
-			'delete_with_user'    => true,
-			'menu_position'       => 5,
-			'menu_icon'           => 'dashicons-pressthis',
-			'supports'            => array( 'title', 'editor', 'author', 'revisions', 'thumbnail', 'excerpt', 'comments', 'post-formats' ),
-			'taxonomies'          => array( $this->get_tag_taxonomy(), 'post_format' ),
-			'has_archive'         => true,
-		);
-
-		if ( isset( $_GET['search'] ) && is_user_logged_in() ) {
-			$args['show_in_rest'] = true;
-		}
-
-		register_post_type( self::CPT, $args );
-	}
-
 	public function register_site_config( PostCollection\SiteConfig\SiteConfig $config ) {
 		$this->site_configs[] = $config;
-	}
-
-
-	public function friends_frontend_post_types( $post_types ) {
-		$post_types[] = self::CPT;
-		return $post_types;
 	}
 
 	/**
@@ -2036,6 +1982,27 @@ class Post_Collection {
 	}
 
 	/**
+	 * Migrate post_collection posts to friend_post_cache post type.
+	 */
+	private static function migrate_post_type() {
+		if ( get_option( 'friends_post_collection_migrated_post_type', false ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		$updated = $wpdb->update(
+			$wpdb->posts,
+			array( 'post_type' => 'friend_post_cache' ),
+			array( 'post_type' => 'post_collection' ),
+			array( '%s' ),
+			array( '%s' )
+		);
+
+		update_option( 'friends_post_collection_migrated_post_type', true );
+	}
+
+	/**
 	 * Migrate post_tag taxonomy to friend_tag for post_collection posts.
 	 */
 	private static function migrate_post_tags() {
@@ -2055,14 +2022,23 @@ class Post_Collection {
 
 		global $wpdb;
 
-		// Get all post_collection posts that have post_tag terms
+		// Get all post_collection users
+		$post_collection_users = get_users( array( 'role' => 'post_collection', 'fields' => 'ID' ) );
+		if ( empty( $post_collection_users ) ) {
+			update_option( 'friends_post_collection_migrated_tags', true );
+			return;
+		}
+
+		$user_ids_placeholder = implode( ',', array_fill( 0, count( $post_collection_users ), '%d' ) );
+
+		// Get all friend_post_cache posts authored by post_collection users that have post_tag terms
 		$query = $wpdb->prepare(
-			"SELECT DISTINCT p.ID 
+			"SELECT DISTINCT p.ID
 			FROM {$wpdb->posts} p
 			INNER JOIN {$wpdb->term_relationships} tr ON p.ID = tr.object_id
 			INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
-			WHERE p.post_type = %s AND tt.taxonomy = 'post_tag'",
-			self::CPT
+			WHERE p.post_type = %s AND p.post_author IN ($user_ids_placeholder) AND tt.taxonomy = 'post_tag'",
+			array_merge( array( 'friend_post_cache' ), $post_collection_users )
 		);
 
 		$post_ids = $wpdb->get_col( $query );
@@ -2097,6 +2073,7 @@ class Post_Collection {
 	public static function setup() {
 		self::setup_roles();
 		self::setup_default_user();
+		self::migrate_post_type();
 		self::migrate_post_tags();
 	}
 }
