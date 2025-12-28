@@ -8,6 +8,7 @@ class ExtractedPage {
 	public $url;
 	public $author;
 	public $post_format = 'standard';
+	public $raw_html;
 
 	/**
 	 * ExtractedPage constructor.
