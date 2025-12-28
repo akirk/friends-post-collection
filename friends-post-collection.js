@@ -92,6 +92,31 @@ jQuery( function ( $ ) {
 		return false;
 	} );
 
+	$document.on( 'click', 'a.friends-post-collection-re-extract', function () {
+		var $this = $( this );
+		var search_indicator = $this.find( 'i' );
+		if ( search_indicator.hasClass( 'loading' ) ) {
+			return;
+		}
+		wp.ajax.send( 'friends-post-collection-re-extract', {
+			data: {
+				id: $this.data( 'id' )
+			},
+			beforeSend: function () {
+				search_indicator.addClass( 'form-icon loading' );
+			},
+			success: function ( response ) {
+				search_indicator.removeClass( 'form-icon loading' ).addClass( 'dashicons dashicons-saved' );
+				$this.closest( 'article' ).find( 'h4.card-title a' ).text( response.post_title );
+				$this.closest( 'article' ).find( 'div.card-body' ).html( response.post_content );
+			},
+			error: function ( e ) {
+				search_indicator.removeClass( 'form-icon loading' ).addClass( 'dashicons dashicons-warning' ).prop( 'title', e );
+			}
+		} );
+		return false;
+	} );
+
 	$document.on( 'click', 'a.post-collection-fetch-url-opener', function () {
 		$( '#post-collection-fetch-form' ).toggleClass( 'd-hide' ).find( 'input[type=url]' ).focus();
 		return false;

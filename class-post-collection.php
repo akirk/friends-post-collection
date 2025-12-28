@@ -140,6 +140,7 @@ class Post_Collection {
 	 * Register the WordPress hooks
 	 */
 	private function register_hooks() {
+		add_action( 'init', array( $this, 'add_revision_support' ) );
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
@@ -170,12 +171,17 @@ class Post_Collection {
 		add_action( 'wp_ajax_friends-post-collection-change-author', array( $this, 'wp_ajax_change_author' ) );
 		add_action( 'wp_ajax_friends-post-collection-fetch-full-content', array( $this, 'wp_ajax_fetch_full_content' ) );
 		add_action( 'wp_ajax_friends-post-collection-download-images', array( $this, 'wp_ajax_download_images' ) );
+		add_action( 'wp_ajax_friends-post-collection-re-extract', array( $this, 'wp_ajax_re_extract' ) );
 		add_filter( 'friends_search_autocomplete', array( $this, 'friends_search_autocomplete' ), 20, 2 );
 		add_filter( 'friends_browser_extension_rest_info', array( $this, 'friends_browser_extension_rest_info' ) );
 	}
 
 	public function register_site_config( PostCollection\SiteConfig\SiteConfig $config ) {
 		$this->site_configs[] = $config;
+	}
+
+	public function add_revision_support() {
+		add_post_type_support( self::CPT, 'revisions' );
 	}
 
 	/**
@@ -304,6 +310,17 @@ class Post_Collection {
 			<i class="<?php echo esc_attr( $i_classes ); ?>"></i></a>
 		</li>
 		<?php
+		$revisions = wp_get_post_revisions( get_the_ID(), array( 'posts_per_page' => 1 ) );
+		if ( ! empty( $revisions ) ) :
+			?>
+		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-re-extract has-icon-right">
+			<?php
+				esc_html_e( 'Re-extract from original HTML', 'friends' );
+			?>
+			<i class="form-icon"></i></a>
+		</li>
+			<?php
+		endif;
 	}
 
 	public function edit_post_collection_link( $link, $user_id ) {
@@ -771,12 +788,12 @@ class Post_Collection {
 				return;
 			}
 			$saved_body = get_user_option( 'friends-post-collection_last_save', $_REQUEST['user'] );
-			list( $last_url, $last_body ) = explode( $delimiter, $saved_body ? $saved_body : $delimiter );
+			list( $last_url, $last_body ) = explode( $delimiter, $saved_body ? $saved_body : $delimiter, 2 );
 			$url = wp_unslash( $_REQUEST['collect-post'] );
 			$body = false;
 			if ( isset( $_POST['body'] ) ) {
 				$body = wp_unslash( $_POST['body'] );
-			} elseif ( $last_url === $url ) {
+			} elseif ( rawurldecode( $last_url ) === rawurldecode( $url ) ) {
 				$body = $last_body;
 			}
 		}
@@ -838,39 +855,42 @@ class Post_Collection {
 		$post_id = $this->friends ? $this->friends->feed->url_to_postid( $url, $friend_user->ID ) : null;
 		if ( is_null( $post_id ) ) {
 			$item = $this->download( $url, $content );
-			$post_data = array(
-				'post_status' => 'private',
-				'post_author' => $friend_user->ID,
-				'guid'        => $url,
-				'post_type'   => self::CPT,
-			);
-			if ( is_wp_error( $item ) || ( ! $item->content && ! $item->title ) ) {
-				if ( $item->content ) {
-					$post_data['post_content'] = $item->content;
-				} else {
-					$post_data['post_content'] = '';
-				}
-				if ( $item->title ) {
-					$post_data['post_title'] = $item->title;
-				} else {
-					$path = parse_url( $url, PHP_URL_PATH );
-					$path = trim( $path, '/' );
-					$path = explode( '/', $path );
-					$slug = end( $path );
-					$slug = strtr( $slug, '-', ' ' );
-					$post_data['post_title'] = ucwords( $slug );
-				}
-			} else {
-				$title   = strip_tags( trim( $item->title ) );
-				$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
 
-				$post_data['post_title'] = $title;
-				$post_data['post_content'] = $content;
+			$title = '';
+			if ( ! is_wp_error( $item ) && $item->title ) {
+				$title = strip_tags( trim( $item->title ) );
 			}
+			if ( ! $title ) {
+				$path = parse_url( $url, PHP_URL_PATH );
+				$path = trim( $path, '/' );
+				$path = explode( '/', $path );
+				$slug = end( $path );
+				$slug = strtr( $slug, '-', ' ' );
+				$title = ucwords( $slug );
+			}
+
+			$post_data = array(
+				'post_status'  => 'private',
+				'post_author'  => $friend_user->ID,
+				'guid'         => $url,
+				'post_type'    => self::CPT,
+				'post_title'   => $title,
+				'post_content' => $item->raw_html ? $item->raw_html : '',
+			);
 
 			$post_id = wp_insert_post( $post_data, true );
 
-			if ( $item->author ) {
+			if ( ! is_wp_error( $item ) && $item->content ) {
+				$extracted_content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
+				wp_update_post(
+					array(
+						'ID'           => $post_id,
+						'post_content' => $extracted_content,
+					)
+				);
+			}
+
+			if ( ! is_wp_error( $item ) && $item->author ) {
 				update_post_meta( $post_id, 'author', $item->author );
 			}
 		}
@@ -923,6 +943,7 @@ class Post_Collection {
 		}
 
 		$item = $this->extract_content( $content, $url );
+		$item->raw_html = $content;
 		return $item;
 	}
 
@@ -1843,6 +1864,77 @@ class Post_Collection {
 			array(
 				'post_title'   => $post->post_title,
 				'post_content' => $post_data['post_content'],
+			)
+		);
+	}
+
+	/**
+	 * Re-extract content from the original HTML stored in revisions.
+	 */
+	function wp_ajax_re_extract() {
+		if ( ! current_user_can( $this->get_required_role() ) ) {
+			wp_send_json_error( __( 'Sorry, you are not allowed to do that' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			exit;
+		}
+
+		$post = get_post( $_POST['id'] );
+		if ( ! $post ) {
+			wp_send_json_error( __( 'That post does not exist.' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			exit;
+		}
+
+		$revisions = wp_get_post_revisions(
+			$post->ID,
+			array(
+				'order'          => 'ASC',
+				'posts_per_page' => 1,
+			)
+		);
+
+		if ( empty( $revisions ) ) {
+			wp_send_json_error( new \WP_Error( 'no-revisions', __( 'No original HTML revision found.', 'friends' ) ) );
+			exit;
+		}
+
+		$first_revision = reset( $revisions );
+		$raw_html = $first_revision->post_content;
+
+		if ( empty( $raw_html ) ) {
+			wp_send_json_error( new \WP_Error( 'empty-revision', __( 'The original HTML revision is empty.', 'friends' ) ) );
+			exit;
+		}
+
+		$url = get_post_meta( $post->ID, 'url', true );
+		if ( ! $url ) {
+			$url = $post->guid;
+		}
+
+		$item = $this->extract_content( $raw_html, $url );
+		if ( is_wp_error( $item ) ) {
+			wp_send_json_error( $item );
+			exit;
+		}
+
+		if ( ! $item->content && ! $item->title ) {
+			wp_send_json_error( new \WP_Error( 'invalid-content', __( 'No content was extracted.', 'friends' ) ) );
+			exit;
+		}
+
+		$title   = strip_tags( trim( $item->title ) );
+		$content = force_balance_tags( trim( wp_kses_post( $item->content ) ) );
+
+		$post_data = array(
+			'ID'           => $post->ID,
+			'post_title'   => $title ? $title : $post->post_title,
+			'post_content' => $content,
+		);
+
+		wp_update_post( $post_data );
+
+		wp_send_json_success(
+			array(
+				'post_title'   => $post_data['post_title'],
+				'post_content' => $content,
 			)
 		);
 	}
