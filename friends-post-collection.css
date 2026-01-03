@@ -1,33 +1,36 @@
 /* Collapsible menu sections */
 .menu .menu-collapsible-toggle {
 	cursor: pointer;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
 }
 
 .menu .menu-collapsible-toggle::after {
-	content: '\f347';
+	content: '\f345';
 	font-family: dashicons;
-	font-size: 14px;
+	font-size: 1em;
+	margin-left: 0.3em;
+	display: inline-block;
 	transition: transform 0.2s ease;
+	vertical-align: middle;
 }
 
 .menu .menu-collapsible-toggle.is-open::after {
-	transform: rotate(180deg);
+	transform: rotate(90deg);
 }
 
 .menu .menu-collapsible-content {
 	display: none;
-	padding-left: 0.5rem;
-	border-left: 2px solid #eee;
-	margin-left: 0.5rem;
 }
 
 .menu .menu-collapsible-content.is-open {
 	display: block;
 }
 
-.menu .menu-collapsible-content .menu-item {
-	font-size: 0.9em;
+.menu .menu-collapsible-content .menu-nav {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.menu .menu-collapsible-content .menu-nav .menu-item {
+	padding-left: 1em;
 }
