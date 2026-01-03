@@ -121,4 +121,14 @@ jQuery( function ( $ ) {
 		$( '#post-collection-fetch-form' ).toggleClass( 'd-hide' ).find( 'input[type=url]' ).focus();
 		return false;
 	} );
+
+	// Collapsible menu sections
+	$document.on( 'click', '.menu-collapsible-toggle', function ( e ) {
+		e.preventDefault();
+		e.stopPropagation();
+		var $this = $( this );
+		var $content = $this.next( '.menu-collapsible-content' );
+		$this.toggleClass( 'is-open' );
+		$content.toggleClass( 'is-open' );
+	} );
 } );

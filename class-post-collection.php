@@ -224,31 +224,64 @@ class Post_Collection {
 	}
 
 	public function entry_dropdown_menu() {
-		$divider = '<li class="divider" data-content="' . esc_attr__( 'Post Collection', 'friends' ) . '"></li>';
-		$list_tags = array(
-			'li' => array(
-				'class'        => true,
-				'data-content' => true,
-			),
-		);
 		$user_id = get_the_author_meta( 'ID' );
-		if ( $this->is_post_collection_user( $user_id ) ) {
-			echo wp_kses( $divider, $list_tags );
-			$divider = '';
+		$is_post_collection = $this->is_post_collection_user( $user_id );
+
+		// Only show if this is a post collection post.
+		if ( ! $is_post_collection ) {
+			return;
+		}
+		?>
+		<li class="divider" data-content="<?php esc_attr_e( 'Post Collection', 'friends' ); ?>"></li>
+		<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php esc_html_e( 'Edit Post Collection', 'friends' ); ?></a></li>
+		<?php
+		if ( 'private' === get_post_status() ) {
 			?>
-			<li class="menu-item"><a href="<?php echo esc_url( get_edit_user_link( $user_id ) ); ?>"><?php esc_html_e( 'Edit Post Collection', 'friends' ); ?></a></li>
+			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-publish"><?php esc_html_e( 'Show post in the feed', 'friends' ); ?></a></li>
 			<?php
-			if ( 'private' === get_post_status() ) {
-				?>
-				<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-publish"><?php esc_html_e( 'Show post in the feed', 'friends' ); ?></a></li>
-				<?php
-			} elseif ( 'publish' === get_post_status() ) {
-				?>
-					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-private"><?php esc_html_e( 'Hide post from the feed', 'friends' ); ?></a></li>
-				<?php
-			}
+		} elseif ( 'publish' === get_post_status() ) {
+			?>
+			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-mark-private"><?php esc_html_e( 'Hide post from the feed', 'friends' ); ?></a></li>
+			<?php
 		}
 
+		// Content Tools collapsible section.
+		$already_fetched = get_post_meta( get_the_ID(), 'full-content-fetched', true );
+		$fetch_classes = $already_fetched ? 'dashicons dashicons-saved' : 'form-icon';
+
+		$already_downloaded = get_post_meta( get_the_ID(), 'images-downloaded', true );
+		$download_classes = $already_downloaded ? 'dashicons dashicons-saved' : 'form-icon';
+
+		$revisions = wp_get_post_revisions( get_the_ID(), array( 'posts_per_page' => 1 ) );
+		?>
+		<li class="menu-item">
+			<a href="#" class="menu-collapsible-toggle"><?php esc_html_e( 'Content Tools', 'friends' ); ?></a>
+			<div class="menu-collapsible-content">
+				<ul class="menu">
+					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user_id ); ?>" class="friends-post-collection-fetch-full-content has-icon-right">
+						<?php esc_html_e( 'Fetch full content', 'friends' ); ?>
+						<i class="<?php echo esc_attr( $fetch_classes ); ?>"></i></a>
+					</li>
+					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user_id ); ?>" class="friends-post-collection-download-images has-icon-right">
+						<?php esc_html_e( 'Download external images', 'friends' ); ?>
+						<i class="<?php echo esc_attr( $download_classes ); ?>"></i></a>
+					</li>
+					<?php if ( ! empty( $revisions ) ) : ?>
+					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-re-extract has-icon-right">
+						<?php esc_html_e( 'Re-extract from original HTML', 'friends' ); ?>
+						<i class="form-icon"></i></a>
+					</li>
+					<li class="menu-item"><a href="<?php echo esc_url( admin_url( 'revision.php?revision=' . reset( $revisions )->ID ) ); ?>">
+						<?php esc_html_e( 'View original HTML', 'friends' ); ?></a>
+					</li>
+					<?php endif; ?>
+				</ul>
+			</div>
+		</li>
+		<?php
+
+		// Move/Copy collapsible section.
+		$other_collections = array();
 		foreach ( $this->get_post_collection_users()->get_results() as $user ) {
 			if ( intval( $user_id ) === intval( $user->ID ) ) {
 				continue;
@@ -256,68 +289,42 @@ class Post_Collection {
 			if ( get_user_option( 'friends_post_collection_inactive', $user->ID ) ) {
 				continue;
 			}
-			echo wp_kses( $divider, $list_tags );
-			$divider = '';
-			?>
-			<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-originalauthor="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ? ' copy-mode' : '' ); ?>">
-				<?php
-				if ( get_user_option( 'friends_post_collection_copy_mode', $user->ID ) ) {
-					echo esc_html(
-						sprintf(
-							// translators: %s is the name of a post collection.
-							_x( 'Copy to %s', 'post-collection', 'friends' ),
-							$user->display_name
-						)
-					);
-				} else {
-					echo esc_html(
-						sprintf(
-							// translators: %s is the name of a post collection.
-							_x( 'Move to %s', 'post-collection', 'friends' ),
-							$user->display_name
-						)
-					);
-				}
-				?>
-				<i class="form-icon"></i></a>
-			</li>
-			<?php
+			$other_collections[] = $user;
 		}
 
-		$already_fetched = get_post_meta( get_the_ID(), 'full-content-fetched', true );
-		$i_classes = 'form-icon';
-		if ( $already_fetched ) {
-			$i_classes = 'dashicons dashicons-saved';
-		}
-
-		$already_downloaded = get_post_meta( get_the_ID(), 'images-downloaded', true );
-		$i_classes = 'form-icon';
-		if ( $already_downloaded ) {
-			$i_classes = 'dashicons dashicons-saved';
-		}
-
-		?>
-		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( get_the_author_meta( 'ID' ) ); ?>" class="friends-post-collection-fetch-full-content has-icon-right">
-			<?php
-				esc_html_e( 'Fetch full content', 'friends' );
+		if ( ! empty( $other_collections ) ) :
 			?>
-			<i class="<?php echo esc_attr( $i_classes ); ?>"></i></a>
-		</li>
-		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( get_the_author_meta( 'ID' ) ); ?>" class="friends-post-collection-download-images has-icon-right">
-			<?php
-				esc_html_e( 'Download external images', 'friends' );
-			?>
-			<i class="<?php echo esc_attr( $i_classes ); ?>"></i></a>
-		</li>
-		<?php
-		$revisions = wp_get_post_revisions( get_the_ID(), array( 'posts_per_page' => 1 ) );
-		if ( ! empty( $revisions ) ) :
-			?>
-		<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" class="friends-post-collection-re-extract has-icon-right">
-			<?php
-				esc_html_e( 'Re-extract from original HTML', 'friends' );
-			?>
-			<i class="form-icon"></i></a>
+		<li class="menu-item">
+			<a href="#" class="menu-collapsible-toggle"><?php esc_html_e( 'Move/Copy', 'friends' ); ?></a>
+			<div class="menu-collapsible-content">
+				<ul class="menu">
+					<?php foreach ( $other_collections as $user ) : ?>
+					<?php $is_copy_mode = get_user_option( 'friends_post_collection_copy_mode', $user->ID ); ?>
+					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-originalauthor="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( $is_copy_mode ? ' copy-mode' : '' ); ?>">
+						<?php
+						if ( $is_copy_mode ) {
+							echo esc_html(
+								sprintf(
+									// translators: %s is the name of a post collection.
+									_x( 'Copy to %s', 'post-collection', 'friends' ),
+									$user->display_name
+								)
+							);
+						} else {
+							echo esc_html(
+								sprintf(
+									// translators: %s is the name of a post collection.
+									_x( 'Move to %s', 'post-collection', 'friends' ),
+									$user->display_name
+								)
+							);
+						}
+						?>
+						<i class="form-icon"></i></a>
+					</li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
 		</li>
 			<?php
 		endif;
@@ -571,7 +578,8 @@ class Post_Collection {
 		}
 
 		if ( is_user_logged_in() && $this->is_on_friends_frontend() ) {
-			wp_enqueue_script( 'send-to-e-reader', plugins_url( 'friends-post-collection.js', __FILE__ ), array( 'friends' ), 1.0 );
+			wp_enqueue_style( 'friends-post-collection', plugins_url( 'friends-post-collection.css', __FILE__ ), array(), '1.0' );
+			wp_enqueue_script( 'friends-post-collection', plugins_url( 'friends-post-collection.js', __FILE__ ), array( 'friends' ), '1.0', true );
 		}
 	}
 
