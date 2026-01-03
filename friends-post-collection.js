@@ -1,4 +1,5 @@
 jQuery( function ( $ ) {
+	console.log( 'friends-post-collection.js loaded' );
 	var $document = $( document );
 
 	wp = wp || {};
@@ -123,12 +124,18 @@ jQuery( function ( $ ) {
 	} );
 
 	// Collapsible menu sections
-	$document.on( 'click', '.menu-collapsible-toggle', function ( e ) {
-		e.preventDefault();
-		e.stopPropagation();
+	$document.on( 'click', 'a.menu-collapsible-toggle', function () {
+		console.log( 'Collapsible toggle clicked' );
 		var $this = $( this );
-		var $content = $this.next( '.menu-collapsible-content' );
+		var $content = $this.siblings( '.menu-collapsible-content' );
+		console.log( 'Siblings found:', $content.length );
+		if ( ! $content.length ) {
+			$content = $this.next( '.menu-collapsible-content' );
+			console.log( 'Next found:', $content.length );
+		}
 		$this.toggleClass( 'is-open' );
 		$content.toggleClass( 'is-open' );
+		console.log( 'Classes toggled, is-open:', $this.hasClass( 'is-open' ) );
+		return false;
 	} );
 } );
