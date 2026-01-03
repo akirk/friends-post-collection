@@ -257,7 +257,7 @@ class Post_Collection {
 		<li class="menu-item">
 			<a href="#" class="menu-collapsible-toggle"><?php esc_html_e( 'Content Tools', 'friends' ); ?></a>
 			<div class="menu-collapsible-content">
-				<ul class="menu">
+				<ul class="menu-nav">
 					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user_id ); ?>" class="friends-post-collection-fetch-full-content has-icon-right">
 						<?php esc_html_e( 'Fetch full content', 'friends' ); ?>
 						<i class="<?php echo esc_attr( $fetch_classes ); ?>"></i></a>
@@ -278,8 +278,8 @@ class Post_Collection {
 				</ul>
 			</div>
 		</li>
-		<?php
 
+		<?php
 		// Move/Copy collapsible section.
 		$other_collections = array();
 		foreach ( $this->get_post_collection_users()->get_results() as $user ) {
@@ -297,7 +297,7 @@ class Post_Collection {
 		<li class="menu-item">
 			<a href="#" class="menu-collapsible-toggle"><?php esc_html_e( 'Move/Copy', 'friends' ); ?></a>
 			<div class="menu-collapsible-content">
-				<ul class="menu">
+				<ul class="menu-nav">
 					<?php foreach ( $other_collections as $user ) : ?>
 					<?php $is_copy_mode = get_user_option( 'friends_post_collection_copy_mode', $user->ID ); ?>
 					<li class="menu-item"><a href="#" data-id="<?php echo esc_attr( get_the_ID() ); ?>" data-author="<?php echo esc_attr( $user->ID ); ?>" data-originalauthor="<?php echo esc_attr( $user->ID ); ?>" class="friends-post-collection-change-author has-icon-right<?php echo esc_attr( $is_copy_mode ? ' copy-mode' : '' ); ?>">
