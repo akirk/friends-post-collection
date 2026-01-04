@@ -148,6 +148,7 @@ class Post_Collection {
 	private function register_hooks() {
 		add_action( 'init', array( $this, 'register_custom_post_type' ) );
 		add_action( 'init', array( $this, 'add_revision_support' ) );
+		add_filter( 'friends_author_post_type', array( $this, 'filter_author_post_type' ), 10, 2 );
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
@@ -212,7 +213,7 @@ class Post_Collection {
 			'description'         => __( 'A collected post from the web', 'post-collection' ),
 			'publicly_queryable'  => current_user_can( $this->get_required_role() ),
 			'show_ui'             => true,
-			'show_in_menu'        => apply_filters( 'post_collection_show_in_menu', false ),
+			'show_in_menu'        => apply_filters( 'post_collection_show_in_menu', true ),
 			'show_in_nav_menus'   => false,
 			'show_in_admin_bar'   => false,
 			'show_in_rest'        => is_user_logged_in(),
@@ -232,6 +233,20 @@ class Post_Collection {
 
 	public function add_revision_support() {
 		add_post_type_support( self::CPT, 'revisions' );
+	}
+
+	/**
+	 * Filter the post type when querying by a post_collection author.
+	 *
+	 * @param string|array $post_type The current post type(s).
+	 * @param User         $user      The author being queried.
+	 * @return string|array The filtered post type(s).
+	 */
+	public function filter_author_post_type( $post_type, $user ) {
+		if ( $user->has_cap( 'post_collection' ) ) {
+			return self::CPT;
+		}
+		return $post_type;
 	}
 
 	/**
