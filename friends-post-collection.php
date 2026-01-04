@@ -4,7 +4,6 @@
  * Plugin author: Alex Kirk
  * Plugin URI: https://github.com/akirk/friends-post-collection
  * Version: 1.2.6
- * Requires Plugins: friends
  *
  * Description: Collect posts from around the web into your Friends UI.
  *
@@ -26,6 +25,20 @@ define( 'FRIENDS_POST_COLLECTION_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FRIENDS_POST_COLLECTION_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
 require_once __DIR__ . '/vendor/autoload.php';
+
+if ( ! class_exists( __NAMESPACE__ . '\User' ) ) {
+	require_once __DIR__ . '/class-user.php';
+}
+if ( ! class_exists( __NAMESPACE__ . '\User_Query' ) ) {
+	require_once __DIR__ . '/class-user-query.php';
+}
+if ( ! class_exists( __NAMESPACE__ . '\User_Feed' ) ) {
+	require_once __DIR__ . '/class-user-feed.php';
+}
+if ( ! class_exists( __NAMESPACE__ . '\Subscription' ) ) {
+	require_once __DIR__ . '/class-subscription.php';
+}
+
 require_once __DIR__ . '/class-post-collection.php';
 require_once __DIR__ . '/class-extracted-page.php';
 require_once __DIR__ . '/site-configs/class-site-config.php';

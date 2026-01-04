@@ -1981,7 +1981,10 @@ class Post_Collection {
 			$blog_id = (int) $blog_id->blog_id;
 		}
 
-		if ( is_plugin_active_for_network( FRIENDS_PLUGIN_BASENAME ) ) {
+		$is_network_active = defined( 'FRIENDS_PLUGIN_BASENAME' ) && is_plugin_active_for_network( FRIENDS_PLUGIN_BASENAME );
+		$is_network_active = $is_network_active || is_plugin_active_for_network( plugin_basename( FRIENDS_POST_COLLECTION_PLUGIN_FILE ) );
+
+		if ( $is_network_active ) {
 			switch_to_blog( $blog_id );
 			self::setup();
 			restore_current_blog();
