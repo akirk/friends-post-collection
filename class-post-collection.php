@@ -849,8 +849,8 @@ class Post_Collection {
 
 	private function get_bookmarklet_js() {
 		$js = file_get_contents( __DIR__ . '/post-collection-injector.js' );
-		$js = str_replace( 'text.sending_article_to_your_blog', '"' . addslashes( __( 'Sending the article to your blog...', 'friends' ) ) . '"', $js );
-		$js = str_replace( 'text.do_you_want_to_send_the_article_to_your_blog', '"' . addslashes( __( 'Do you want to send the article on this page to your blog?', 'friends' ) ) . '"', $js );
+		$js = str_replace( 'text.sending_article_to_your_blog', '"' . addslashes( __( 'Sending the article to your WordPress...', 'friends' ) ) . '"', $js );
+		$js = str_replace( 'text.do_you_want_to_send_the_article_to_your_blog', '"' . addslashes( __( 'Do you want to send the article on this page to your WordPress?', 'friends' ) ) . '"', $js );
 		$js = str_replace( PHP_EOL, '', preg_replace( '/\s+/', ' ', $js ) );
 		return $js;
 	}
