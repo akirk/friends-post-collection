@@ -146,8 +146,13 @@ class Post_Collection {
 	 * Register the WordPress hooks
 	 */
 	private function register_hooks() {
-		add_action( 'init', array( $this, 'register_custom_post_type' ) );
-		add_action( 'init', array( $this, 'add_revision_support' ) );
+		if ( did_action( 'init' ) ) {
+			$this->register_custom_post_type();
+			$this->add_revision_support();
+		} else {
+			add_action( 'init', array( $this, 'register_custom_post_type' ) );
+			add_action( 'init', array( $this, 'add_revision_support' ) );
+		}
 		add_filter( 'friends_author_post_type', array( $this, 'filter_author_post_type' ), 10, 2 );
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
@@ -641,53 +646,76 @@ class Post_Collection {
 	}
 
 	public function admin_menu() {
-		// Only show the menu if installed standalone.
-		$friends_settings_exist = '' !== menu_page_url( 'friends', false );
-		if ( $friends_settings_exist ) {
-			$parent_menu = 'friends';
-			$unread_badge = '';
-			if ( $this->friends && $this->friends->admin ) {
-				$unread_badge = $this->friends->admin->get_unread_badge();
-			}
-			$menu_title = __( 'Friends', 'friends' ) . $unread_badge;
-			$page_type = sanitize_title( $menu_title );
+		$parent_menu = 'edit.php?post_type=' . self::CPT;
 
-			add_submenu_page(
-				$parent_menu,
-				__( 'Post Collection', 'post-collection' ),
-				__( 'Post Collection', 'post-collection' ),
-				'edit_private_posts',
-				'post-collection',
-				array( $this, 'about_page' )
-			);
-		} else {
-			$parent_menu = 'post-collection';
-			$menu_title = __( 'Post Collection', 'post-collection' );
-			$page_type = sanitize_title( $menu_title );
-
-			add_menu_page( 'post-collection', __( 'Post Collection', 'post-collection' ), 'edit_private_posts', 'post-collection', null, 'dashicons-book', 3 );
-			add_submenu_page(
-				$parent_menu,
-				__( 'About', 'post-collection' ),
-				__( 'About', 'post-collection' ),
-				'edit_private_posts',
-				'post-collection',
-				array( $this, 'about_page_with_friends_about' )
-			);
-
-		}
-
-		if ( isset( $_GET['page'] ) && 'create-post-collection' === $_GET['page'] ) {
-			add_submenu_page( $parent_menu, __( 'Create Post Collection', 'post-collection' ), __( 'Create Post Collection', 'post-collection' ), $this->get_required_role(), 'create-post-collection', array( $this, 'render_create_post_collection' ) );
-			add_action( 'load-' . $page_type . '_page_create-post-collection', array( $this, 'process_create_post_collection' ) );
-		}
-
-		if ( isset( $_GET['page'] ) && 'edit-post-collection' === $_GET['page'] ) {
-			add_submenu_page( $parent_menu, __( 'Edit Post Collection', 'post-collection' ), __( 'Edit Post Collection', 'post-collection' ), $this->get_required_role(), 'edit-post-collection' . ( 'edit-post-collection' !== $_GET['page'] && isset( $_GET['user'] ) ? '&user=' . $_GET['user'] : '' ), array( $this, 'render_edit_post_collection' ) );
-			add_action( 'load-' . $page_type . '_page_edit-post-collection', array( $this, 'process_edit_post_collection' ) );
-		}
+		add_submenu_page(
+			$parent_menu,
+			__( 'Settings', 'post-collection' ),
+			__( 'Settings', 'post-collection' ),
+			$this->get_required_role(),
+			'post-collection-settings',
+			array( $this, 'render_settings_page' )
+		);
 	}
 
+
+	/**
+	 * Render the settings page.
+	 */
+	public function render_settings_page() {
+		$post_collections = $this->get_post_collection_users()->get_results();
+		$bookmarklet_js = $this->get_bookmarklet_js();
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'Post Collection Settings', 'post-collection' ); ?></h1>
+
+			<p><?php esc_html_e( 'The Post Collection plugin allows you to save external posts to your WordPress, either for just collecting them for yourself as a searchable archive, or to syndicate those posts into new feeds.', 'post-collection' ); ?></p>
+
+			<h2><?php esc_html_e( 'Bookmarklet', 'post-collection' ); ?></h2>
+			<p><?php esc_html_e( 'Drag this bookmarklet to your bookmarks bar to save articles from any webpage:', 'post-collection' ); ?></p>
+			<p>
+			<?php foreach ( $post_collections as $user ) : ?>
+				<a href="javascript:<?php echo rawurlencode( trim( str_replace( "window.document.getElementById( 'post-collection-script' ).getAttribute( 'data-post-url' )", "(window.playgroundUrl || '" . esc_url( home_url() ) . "') + '/?user=" . $user->ID . "'", $bookmarklet_js ), ';' ) ); ?>" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd; text-decoration: none; margin-right: 1em;">
+					<?php
+					echo esc_html( sprintf(
+						/* translators: %s is the name of a Post Collection user. */
+						__( 'Save to %s', 'post-collection' ),
+						$user->display_name
+					) );
+					?>
+				</a>
+			<?php endforeach; ?>
+			</p>
+
+			<h2><?php esc_html_e( 'Post Collections', 'post-collection' ); ?></h2>
+			<?php if ( empty( $post_collections ) ) : ?>
+				<p><?php esc_html_e( 'No post collections found. Create a user with the "Post Collection" role to get started.', 'post-collection' ); ?></p>
+			<?php else : ?>
+				<table class="widefat striped">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Name', 'post-collection' ); ?></th>
+							<th><?php esc_html_e( 'Posts', 'post-collection' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php foreach ( $post_collections as $user ) : ?>
+						<tr>
+							<td><a href="<?php echo esc_url( get_edit_user_link( $user->ID ) ); ?>"><?php echo esc_html( $user->display_name ); ?></a></td>
+							<td>
+								<?php
+								$count = count_user_posts( $user->ID, self::CPT );
+								echo esc_html( $count );
+								?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
 
 	/**
 	 * Add a Post Collection entry to the New Content admin section
@@ -833,8 +861,10 @@ class Post_Collection {
 	public function toolbox_bookmarklet() {
 		$post_collections = array();
 		foreach ( $this->get_post_collection_users()->get_results() as $user ) {
-			$url = home_url( '/?user=' . $user->ID );
-			$post_collections[ $url ] = $user->display_name;
+			$post_collections[] = array(
+				'user_id'      => $user->ID,
+				'display_name' => $user->display_name,
+			);
 		}
 
 		$this->template_loader()->get_template_part(

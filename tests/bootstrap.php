@@ -115,4 +115,8 @@ namespace {
 	function add_filter( $tag, $function_to_add, $priority = 10, $accepted_args = 1 ) {
 		return true;
 	}
+
+	function did_action( $hook_name ) {
+		return false;
+	}
 }
