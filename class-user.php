@@ -78,6 +78,13 @@ class User extends \WP_User {
 	 * @return string The URL.
 	 */
 	public function get_local_friends_page_url( $post_id = null ) {
+		if ( ! class_exists( 'Friends\Friends' ) ) {
+			if ( $post_id && ! is_wp_error( $post_id ) ) {
+				return home_url( '?p=' . $post_id );
+			}
+			return home_url();
+		}
+
 		$path = '/';
 		if ( $post_id && ! is_wp_error( $post_id ) ) {
 			$path = '/' . $post_id . '/';

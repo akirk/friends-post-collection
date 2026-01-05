@@ -44,7 +44,7 @@
 		endif;
 	?>
 		</td>
-		<td><a href="javascript:<?php echo rawurlencode( trim( str_replace( "window.document.getElementById( 'post-collection-script' ).getAttribute( 'data-post-url' )", "(window.playgroundUrl || '" . esc_url( home_url() ) . "') + '/?user=" . $user->ID . "'", $args['bookmarklet_js'] ), ';' ) ); ?>">
+		<td><a href="javascript:<?php echo rawurlencode( trim( str_replace( "window.document.getElementById( 'post-collection-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( home_url() ) . "/?user=" . $user->ID . "'", $args['bookmarklet_js'] ), ';' ) ); ?>">
 			<?php
 			echo esc_html(
 				sprintf(

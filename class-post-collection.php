@@ -675,7 +675,7 @@ class Post_Collection {
 			<p><?php esc_html_e( 'Drag this bookmarklet to your bookmarks bar to save articles from any webpage:', 'post-collection' ); ?></p>
 			<p>
 			<?php foreach ( $post_collections as $user ) : ?>
-				<a href="javascript:<?php echo rawurlencode( trim( str_replace( "window.document.getElementById( 'post-collection-script' ).getAttribute( 'data-post-url' )", "(window.playgroundUrl || '" . esc_url( home_url() ) . "') + '/?user=" . $user->ID . "'", $bookmarklet_js ), ';' ) ); ?>" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd; text-decoration: none; margin-right: 1em;">
+				<a href="javascript:<?php echo rawurlencode( trim( str_replace( "window.document.getElementById( 'post-collection-script' ).getAttribute( 'data-post-url' )", "'" . esc_url( home_url() ) . "/?user=" . $user->ID . "'", $bookmarklet_js ), ';' ) ); ?>" style="display: inline-block; padding: .5em; border: 1px solid #999; border-radius: 4px; background-color: #ddd; text-decoration: none; margin-right: 1em;">
 					<?php
 					echo esc_html( sprintf(
 						/* translators: %s is the name of a Post Collection user. */
