@@ -25,20 +25,8 @@ define( 'POST_COLLECTION_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'POST_COLLECTION_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
 require_once __DIR__ . '/vendor/autoload.php';
-
-if ( ! class_exists( 'Friends\User' ) ) {
-	require_once __DIR__ . '/class-user.php';
-}
-if ( ! class_exists( 'Friends\User_Query' ) ) {
-	require_once __DIR__ . '/class-user-query.php';
-}
-if ( ! class_exists( 'Friends\User_Feed' ) ) {
-	require_once __DIR__ . '/class-user-feed.php';
-}
-if ( ! class_exists( 'Friends\Subscription' ) ) {
-	require_once __DIR__ . '/class-subscription.php';
-}
-
+require_once __DIR__ . '/class-user.php';
+require_once __DIR__ . '/class-user-query.php';
 require_once __DIR__ . '/class-post-collection.php';
 require_once __DIR__ . '/class-extracted-page.php';
 require_once __DIR__ . '/site-configs/class-site-config.php';

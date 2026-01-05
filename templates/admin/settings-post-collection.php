@@ -17,7 +17,7 @@
 		</thead>
 		<?php
 		foreach ( $args['post_collections'] as $user ) :
-			$user = new \Friends\User( $user );
+			$user = new \PostCollection\User( $user );
 			$feed_url = trailingslashit( $user->get_local_friends_page_url() . 'feed' );
 			?>
 		<tr>

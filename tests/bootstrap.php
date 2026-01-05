@@ -1,56 +1,5 @@
 <?php
 
-namespace Friends {
-	class User {
-		public $ID;
-		public function __construct( $id = null ) {
-			$this->ID = $id;
-		}
-
-		public static function sanitize_username( $username ) {
-			return preg_replace( '/[^a-z0-9.-]+/', '-', strtolower( $username ) );
-		}
-
-		public static function is_friends_plugin_user( $user ) {
-			return false;
-		}
-
-		public static function get_user_by_id( $user_id ) {
-			return new self( $user_id );
-		}
-
-		public static function get_post_author( $post ) {
-			return new self( $post->post_author ?? null );
-		}
-
-		public function get_local_friends_page_url( $post_id = null ) {
-			return '/friends/';
-		}
-
-		public function has_cap( $cap ) {
-			return false;
-		}
-	}
-
-	class User_Feed {
-		const TAXONOMY = 'friend-user-feed';
-	}
-
-	class Subscription {
-		const TAXONOMY = 'friend-subscription';
-	}
-
-	class User_Query {
-		public function __construct( $args = array() ) {}
-		public function get_results() {
-			return array();
-		}
-		public function get_total() {
-			return 0;
-		}
-	}
-}
-
 namespace {
 	require_once __DIR__ . '/../vendor/autoload.php';
 

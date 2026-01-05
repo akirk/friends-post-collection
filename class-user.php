@@ -3,20 +3,18 @@
  * Post Collection User
  *
  * This wraps \WP_User and provides methods needed by the Post Collection plugin.
- * It is only loaded when the Friends plugin is not active.
  *
- * @package Friends_Post_Collection
+ * @package Post_Collection
  */
 
-namespace Friends;
+namespace PostCollection;
 
 /**
- * This is a standalone User class for the Post Collection plugin.
- * When the Friends plugin is active, its User class is used instead.
+ * User class for the Post Collection plugin.
  *
  * @since 3.0
  *
- * @package Friends_Post_Collection
+ * @package Post_Collection
  * @author Alex Kirk
  */
 class User extends \WP_User {

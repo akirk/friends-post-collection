@@ -3,20 +3,18 @@
  * Post Collection User Query
  *
  * This wraps \WP_User_Query to generate instances of User.
- * It is only loaded when the Friends plugin is not active.
  *
- * @package Friends_Post_Collection
+ * @package Post_Collection
  */
 
-namespace Friends;
+namespace PostCollection;
 
 /**
- * This is a standalone User_Query class for the Post Collection plugin.
- * When the Friends plugin is active, its User_Query class is used instead.
+ * User_Query class for the Post Collection plugin.
  *
  * @since 3.0
  *
- * @package Friends_Post_Collection
+ * @package Post_Collection
  * @author Alex Kirk
  */
 class User_Query extends \WP_User_Query {

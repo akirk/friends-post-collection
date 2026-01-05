@@ -10,10 +10,6 @@
 namespace PostCollection;
 
 use Friends\Friends;
-use Friends\User;
-use Friends\User_Query;
-use Friends\User_Feed;
-use Friends\Subscription;
 use WP_HTML_Tag_Processor;
 
 /**
@@ -70,7 +66,7 @@ class Post_Collection {
 	 * @return string The taxonomy name.
 	 */
 	public function get_tag_taxonomy() {
-		if ( $this->friends ) {
+		if ( $this->friends && defined( 'Friends\Friends::TAG_TAXONOMY' ) ) {
 			return Friends::TAG_TAXONOMY;
 		}
 		return 'friend_tag';
@@ -82,7 +78,7 @@ class Post_Collection {
 	 * @return string The capability name.
 	 */
 	public function get_required_role() {
-		if ( $this->friends ) {
+		if ( $this->friends && defined( 'Friends\Friends::REQUIRED_ROLE' ) ) {
 			return Friends::REQUIRED_ROLE;
 		}
 		return 'edit_private_posts';
@@ -94,7 +90,7 @@ class Post_Collection {
 	 * @return string The version string.
 	 */
 	public function get_friends_version() {
-		if ( $this->friends ) {
+		if ( $this->friends && defined( 'Friends\Friends::VERSION' ) ) {
 			return Friends::VERSION;
 		}
 		return '1.0';
@@ -1656,7 +1652,7 @@ class Post_Collection {
 
 	public function after_register_feed_taxonomy() {
 		register_term_meta(
-			User_Feed::TAXONOMY,
+			'friend-user-feed',
 			'fetch-full-content',
 			array(
 				'type'   => 'boolean',
@@ -1790,8 +1786,8 @@ class Post_Collection {
 			);
 		} else {
 			$new_author->insert_post( (array) $post );
-			if ( $old_author instanceof Subscription ) {
-				wp_remove_object_terms( $post->ID, $old_author->get_term_id(), Subscription::TAXONOMY );
+			if ( class_exists( 'Friends\Subscription' ) && $old_author instanceof \Friends\Subscription ) {
+				wp_remove_object_terms( $post->ID, $old_author->get_term_id(), 'friend-subscription' );
 			}
 			if ( $new_author->ID !== $originalauthor->ID ) {
 				$new_text = sprintf(
@@ -2167,7 +2163,7 @@ class Post_Collection {
 	 * @return string The taxonomy name.
 	 */
 	private static function get_tag_taxonomy_static() {
-		if ( class_exists( 'Friends\Friends' ) ) {
+		if ( class_exists( 'Friends\Friends' ) && defined( 'Friends\Friends::TAG_TAXONOMY' ) ) {
 			return Friends::TAG_TAXONOMY;
 		}
 		return 'friend_tag';
