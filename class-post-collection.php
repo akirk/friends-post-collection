@@ -150,6 +150,7 @@ class Post_Collection {
 			add_action( 'init', array( $this, 'add_revision_support' ) );
 		}
 		add_filter( 'friends_author_post_type', array( $this, 'filter_author_post_type' ), 10, 2 );
+		add_filter( 'friends_frontend_post_types', array( $this, 'add_frontend_post_types' ) );
 		add_action( 'tool_box', array( $this, 'toolbox_bookmarklet' ) );
 		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ), 50 );
@@ -248,6 +249,18 @@ class Post_Collection {
 			return self::CPT;
 		}
 		return $post_type;
+	}
+
+	/**
+	 * Add post_collection CPT to the Friends frontend post types.
+	 *
+	 * This is for backward compatibility with older versions of the Friends plugin.
+	 *
+	 * @param array $post_types The incoming post types.
+	 * @return array The frontend post types.
+	 */
+	public function add_frontend_post_types( $post_types ) {
+		return array_merge( array( self::CPT ), $post_types );
 	}
 
 	/**
@@ -968,7 +981,7 @@ class Post_Collection {
 				'guid'         => $url,
 				'post_type'    => self::CPT,
 				'post_title'   => $title,
-				'post_content' => $item->raw_html ? $item->raw_html : '',
+				'post_content' => ! is_wp_error( $item ) && $item->raw_html ? $item->raw_html : '',
 			);
 
 			$post_id = wp_insert_post( $post_data, true );
